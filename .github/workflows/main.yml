@@ -12,13 +12,13 @@ jobs:
     timeout-minutes: 330  # Maks 5.5 jam, supaya tidak kena limit 6 jam
 
     steps:
-    - name: Download
+    - name: Download ngrok
       run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
 
-    - name: Extract
+    - name: Extract ngrok
       run: Expand-Archive ngrok.zip
 
-    - name: Auth
+    - name: Auth ngrok
       run: .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
@@ -34,6 +34,46 @@ jobs:
 
     - name: Set Password for runneradmin
       run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
+
+    # Install Chocolatey
+    - name: Install Chocolatey
+      run: Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+    # Install Python via Chocolatey
+    - name: Install Python
+      run: choco install python -y
+
+    # Install Notepad++
+    - name: Install Notepad++
+      run: choco install notepadplusplus -y
+
+    # Install WinRAR
+    - name: Install WinRAR
+      run: choco install winrar -y
+
+    # Menonaktifkan Windows Defender Real-time Protection
+    - name: Disable Windows Defender Real-time Protection
+      run: Set-MpPreference -DisableRealtimeMonitoring $true
+      shell: pwsh
+
+    # Menonaktifkan Windows Security
+    - name: Disable Windows Security
+      run: Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
+      shell: pwsh
+
+    # Mendownload file GUI.zip ke Desktop RDP
+    - name: Download GUI.zip to RDP Desktop
+      run: Invoke-WebRequest https://api.gap-indonesia.co.id/uploads/GUI.zip -OutFile C:\Users\runneradmin\Desktop\GUI.zip
+
+    # Mengekstrak GUI.zip ke folder GUI di Desktop RDP
+    - name: Extract GUI.zip to RDP Desktop
+      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\GUI.zip -DestinationPath C:\Users\runneradmin\Desktop\GUI
+
+    # Menjalankan pip install -r requirements.txt
+    - name: Install Python requirements from requirements.txt
+      run: |
+        python -m ensurepip --upgrade  # Pastikan pip terinstal
+        pip install -r C:\Users\runneradmin\Desktop\GUI\requirements.txt
 
     - name: Create Tunnel
       run: .\ngrok\ngrok.exe tcp 3389
