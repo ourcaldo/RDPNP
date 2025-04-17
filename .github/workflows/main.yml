@@ -56,6 +56,15 @@ jobs:
       run: Set-MpPreference -DisableRealtimeMonitoring $true
       shell: pwsh
 
+    # Membuat kunci registri jika tidak ada dan menonaktifkan Windows Defender
+    - name: Disable Windows Defender using registry
+      run: |
+        # Membuat kunci registri jika belum ada
+        New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft" -Name "Windows Defender" -Force
+        # Menonaktifkan Windows Defender
+        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
+      shell: pwsh
+
     # Menonaktifkan Windows Security
     - name: Disable Windows Security
       run: Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
