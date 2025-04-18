@@ -36,17 +36,22 @@ jobs:
       run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
 
     - name: Install Chocolatey
-      run: Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+      run: Set-ExecutionPolicy Bypass -Scope Process -Force; `
+           [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; `
+           iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 
     - name: Install Python via Chocolatey
-      run: choco install python -y
+      run: choco install python --pre -y
 
-    - name: Add Python to PATH (user level)
+    - name: Add Python to PATH manually
       run: |
-        $pythonPath = "$Env:ProgramFiles\Python*"
-        $pyDir = Get-ChildItem $pythonPath -Directory | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-        [Environment]::SetEnvironmentVariable("PATH", "$Env:PATH;$($pyDir.FullName);$($pyDir.FullName)\Scripts", "User")
-      shell: pwsh
+        $pythonPath = "C:\Python312\Scripts;C:\Python312\"
+        [Environment]::SetEnvironmentVariable("Path", $Env:Path + ";$pythonPath", [EnvironmentVariableTarget]::Machine)
+        $env:Path += ";$pythonPath"
+      shell: powershell
+
+    - name: Upgrade pip
+      run: python -m ensurepip --upgrade && pip install --upgrade pip
 
     - name: Install Notepad++
       run: choco install notepadplusplus -y
@@ -70,14 +75,8 @@ jobs:
     - name: Extract GUI.zip
       run: Expand-Archive -Path C:\Users\runneradmin\Desktop\GUI.zip -DestinationPath C:\Users\runneradmin\Desktop\GUI
 
-    - name: Create install_requirements.bat
-      run: |
-        Set-Content -Path "C:\Users\runneradmin\Desktop\install_requirements.bat" -Value "@echo off`r`ncd C:\Users\runneradmin\Desktop\GUI`r`npython -m pip install --upgrade pip`r`npip install -r requirements.txt`r`npause"
-      shell: pwsh
-
-    - name: Run install_requirements.bat
-      run: Start-Process -FilePath "C:\Users\runneradmin\Desktop\install_requirements.bat" -WorkingDirectory "C:\Users\runneradmin\Desktop" -Verb RunAs
-      shell: pwsh
+    - name: Install Requirements
+      run: pip install -r C:\Users\runneradmin\Desktop\GUI\requirements.txt
 
     - name: Create Tunnel
       run: .\ngrok\ngrok.exe tcp 3389
