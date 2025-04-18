@@ -69,14 +69,20 @@ jobs:
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
       shell: pwsh
 
-    - name: Download GUI.zip to RDP Desktop
-      run: Invoke-WebRequest https://api.gap-indonesia.co.id/uploads/GUI.zip -OutFile C:\Users\runneradmin\Desktop\GUI.zip
+    - name: Download Camo.zip to RDP Desktop
+      run: Invoke-WebRequest https://api.gap-indonesia.co.id/uploads/Camo.zip -OutFile C:\Users\runneradmin\Desktop\Camo.zip
 
-    - name: Extract GUI.zip
-      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\GUI.zip -DestinationPath C:\Users\runneradmin\Desktop\GUI
+    - name: Extract Camo.zip
+      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\Camo.zip -DestinationPath C:\Users\runneradmin\Desktop\Camo
 
     - name: Install Requirements
-      run: pip install -r C:\Users\runneradmin\Desktop\GUI\requirements.txt
+      run: pip install -r C:\Users\runneradmin\Desktop\Camo\requirements.txt
+
+    - name: Run the program (npb.py)
+      run: |
+        cd C:\Users\runneradmin\Desktop\Camo
+        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python npb.py --force'
+      shell: powershell
 
     - name: Create Tunnel
       run: .\ngrok\ngrok.exe tcp 3389
