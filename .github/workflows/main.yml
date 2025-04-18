@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 330  # Maks 5.5 jam, supaya tidak kena limit 6 jam
+    timeout-minutes: 330
 
     steps:
     - name: Download ngrok
@@ -35,54 +35,49 @@ jobs:
     - name: Set Password for runneradmin
       run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
 
-    # Install Chocolatey
     - name: Install Chocolatey
       run: Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 
-    # Install Python via Chocolatey
-    - name: Install Python
+    - name: Install Python via Chocolatey
       run: choco install python -y
 
-    # Install Notepad++
+    - name: Add Python to PATH (user level)
+      run: |
+        $pythonPath = "$Env:ProgramFiles\Python*"
+        $pyDir = Get-ChildItem $pythonPath -Directory | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        [Environment]::SetEnvironmentVariable("PATH", "$Env:PATH;$($pyDir.FullName);$($pyDir.FullName)\Scripts", "User")
+      shell: pwsh
+
     - name: Install Notepad++
       run: choco install notepadplusplus -y
 
-    # Install WinRAR
     - name: Install WinRAR
       run: choco install winrar -y
 
-    # Menonaktifkan Windows Defender Real-time Protection
     - name: Disable Windows Defender Real-time Protection
       run: Set-MpPreference -DisableRealtimeMonitoring $true
       shell: pwsh
 
-    # Membuat kunci registri jika tidak ada dan menonaktifkan Windows Defender
-    - name: Disable Windows Defender using registry
+    - name: Disable Windows Defender via Registry
       run: |
-        # Membuat kunci registri jika belum ada
         New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft" -Name "Windows Defender" -Force
-        # Menonaktifkan Windows Defender
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
       shell: pwsh
 
-    # Menonaktifkan Windows Security
-    - name: Disable Windows Security
-      run: Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
-      shell: pwsh
-
-    # Mendownload file GUI.zip ke Desktop RDP
     - name: Download GUI.zip to RDP Desktop
       run: Invoke-WebRequest https://api.gap-indonesia.co.id/uploads/GUI.zip -OutFile C:\Users\runneradmin\Desktop\GUI.zip
 
-    # Mengekstrak GUI.zip ke folder GUI di Desktop RDP
-    - name: Extract GUI.zip to RDP Desktop
+    - name: Extract GUI.zip
       run: Expand-Archive -Path C:\Users\runneradmin\Desktop\GUI.zip -DestinationPath C:\Users\runneradmin\Desktop\GUI
 
-    # Menjalankan pip install -r requirements.txt
-    - name: Install Python requirements from requirements.txt
+    - name: Create install_requirements.bat
       run: |
-        python -m ensurepip --upgrade  # Pastikan pip terinstal
-        pip install -r C:\Users\runneradmin\Desktop\GUI\requirements.txt
+        Set-Content -Path "C:\Users\runneradmin\Desktop\install_requirements.bat" -Value "@echo off`r`ncd C:\Users\runneradmin\Desktop\GUI`r`npython -m pip install --upgrade pip`r`npip install -r requirements.txt`r`npause"
+      shell: pwsh
+
+    - name: Run install_requirements.bat
+      run: Start-Process -FilePath "C:\Users\runneradmin\Desktop\install_requirements.bat" -WorkingDirectory "C:\Users\runneradmin\Desktop" -Verb RunAs
+      shell: pwsh
 
     - name: Create Tunnel
       run: .\ngrok\ngrok.exe tcp 3389
