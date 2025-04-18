@@ -18,10 +18,13 @@ jobs:
     - name: Extract ngrok
       run: Expand-Archive ngrok.zip
 
-    - name: Auth ngrok
-      run: .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+    - name: Create ngrok config file
+      run: |
+        $config = "authtoken: $Env:NGROK_AUTH_TOKEN`ntunnels:`n  rdp:`n    proto: tcp`n    addr: 3389"
+        $config | Set-Content -Path .\ngrok\ngrok.yml
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+      shell: pwsh
 
     - name: Enable Terminal Services
       run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
@@ -84,8 +87,8 @@ jobs:
         Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python npb.py --force'
       shell: powershell
 
-    - name: Create Tunnel
-      run: .\ngrok\ngrok.exe tcp 3389
+    - name: Start Ngrok Tunnel using config
+      run: .\ngrok\ngrok.exe start --config .\ngrok\ngrok.yml --all
 
     - name: Re-dispatch workflow after 5.5 hours
       if: ${{ success() }}
