@@ -91,5 +91,6 @@ jobs:
       if: always()
       uses: peter-evans/repository-dispatch@v3
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.PERSONAL_TOKEN }}
+        repository: ourcaldo/RDPNP
         event-type: redeploy
