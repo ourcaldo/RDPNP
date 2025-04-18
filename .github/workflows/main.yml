@@ -82,7 +82,7 @@ jobs:
       run: .\ngrok\ngrok.exe tcp 3389
 
     - name: Re-dispatch workflow after 5.5 hours
-      if: always()
+      if: ${{ success() }}
       uses: peter-evans/repository-dispatch@v3
       with:
         token: ${{ secrets.PERSONAL_TOKEN }}
