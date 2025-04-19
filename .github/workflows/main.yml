@@ -88,9 +88,7 @@ jobs:
       shell: powershell
 
     - name: Run the program (npb.py)
-      run: |
-        cd C:\Users\runneradmin\Desktop\Camos
-        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python npb.py --force'
+      run: python C:\Users\runneradmin\Desktop\Camos\npb.py --force
       shell: powershell
 
     - name: Start Ngrok Tunnel using config
