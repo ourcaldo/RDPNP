@@ -92,7 +92,8 @@ jobs:
       shell: powershell
 
     - name: Start Ngrok Tunnel using config
-      run: .\ngrok\ngrok.exe tunnel --config .\ngrok\ngrok.yml rdp
+      run: .\ngrok\ngrok.exe start --config .\ngrok\ngrok.yml --all
+
 
     - name: Re-dispatch workflow every 5.5 hours
       run: |
