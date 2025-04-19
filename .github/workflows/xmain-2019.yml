@@ -1,0 +1,105 @@
+name: Cl
+
+on:
+  push:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [redeploy]
+
+jobs:
+  build:
+    runs-on: windows-2019
+    timeout-minutes: 330
+
+    steps:
+    - name: Download ngrok
+      run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+
+    - name: Extract ngrok
+      run: Expand-Archive ngrok.zip
+
+    - name: Create ngrok config file
+      run: |
+        $config = "version: '2'`nauthtoken: $Env:NGROK_AUTH_TOKEN_NEXPOCKET`ntunnels:`n  rdp:`n    proto: tcp`n    addr: 3389"
+        $config | Set-Content -Path .\ngrok\ngrok.yml
+      env:
+        NGROK_AUTH_TOKEN_NEXPOCKET: ${{ secrets.NGROK_AUTH_TOKEN_NEXPOCKET }}
+      shell: pwsh
+
+    - name: Enable Terminal Services
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+
+    - name: Enable RDP Firewall
+      run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+    - name: Set RDP User Authentication
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+
+    - name: Set Password for runneradmin
+      run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
+
+    - name: Install Chocolatey
+      run: Set-ExecutionPolicy Bypass -Scope Process -Force; `
+           [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; `
+           iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+    - name: Install Python via Chocolatey
+      run: choco install python --pre -y
+
+    - name: Add Python to PATH manually
+      run: |
+        $pythonPath = "C:\Python312\Scripts;C:\Python312\"
+        [Environment]::SetEnvironmentVariable("Path", $Env:Path + ";$pythonPath", [EnvironmentVariableTarget]::Machine)
+        $env:Path += ";$pythonPath"
+      shell: powershell
+
+    - name: Upgrade pip
+      run: python -m ensurepip --upgrade && pip install --upgrade pip
+
+    - name: Install Notepad++
+      run: choco install notepadplusplus -y
+
+    - name: Install WinRAR
+      run: choco install winrar -y
+
+    - name: Disable Windows Defender Real-time Protection
+      run: Set-MpPreference -DisableRealtimeMonitoring $true
+      shell: pwsh
+
+    - name: Disable Windows Defender via Registry
+      run: |
+        New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft" -Name "Windows Defender" -Force
+        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
+      shell: pwsh
+
+    - name: Download Camos.zip to RDP Desktop
+      run: Invoke-WebRequest https://api.gap-indonesia.co.id/uploads/Camos.zip -OutFile C:\Users\runneradmin\Desktop\Camos.zip
+
+    - name: Extract Camos.zip
+      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\Camos.zip -DestinationPath C:\Users\runneradmin\Desktop\Camos
+
+    - name: Install Requirements
+      run: pip install -r C:\Users\runneradmin\Desktop\Camos\requirements.txt
+
+    - name: Fetch Browser (camoufox)
+      run: |
+        cd C:\Users\runneradmin\Desktop\Camos
+        cmd /c "camoufox fetch"
+      shell: powershell
+
+    - name: Run the program (npb.py)
+      run: |
+        cd C:\Users\runneradmin\Desktop\Camos
+        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python npb.py --force'
+      shell: powershell
+
+    - name: Start Ngrok Tunnel using config
+      run: .\ngrok\ngrok.exe start --config .\ngrok\ngrok.yml --all
+
+    - name: Re-dispatch workflow after 5.5 hours
+      if: ${{ success() }}
+      uses: peter-evans/repository-dispatch@v3
+      with:
+        token: ${{ secrets.PERSONAL_TOKEN }}
+        repository: ourcaldo/RDPNP
+        event-type: redeploy
