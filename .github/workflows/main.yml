@@ -1,14 +1,13 @@
-name: Cl
+name: Main C1
 
 on:
-  push:
   workflow_dispatch:
   repository_dispatch:
     types: [redeploy]
 
 jobs:
   build:
-    if: github.event_name == 'repository_dispatch' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    if: github.event_name == 'repository_dispatch' || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     timeout-minutes: 330
 
