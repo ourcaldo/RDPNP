@@ -78,13 +78,14 @@ jobs:
     - name: Extract Camos.zip
       run: Expand-Archive -Path C:\Users\runneradmin\Desktop\Camos.zip -DestinationPath C:\Users\runneradmin\Desktop\Camos
 
-    - name: Fetch Browser (camoufox)
-      run: |
-        cmd /c "camoufox fetch"
-      shell: powershell
-
     - name: Install Requirements
       run: pip install -r C:\Users\runneradmin\Desktop\Camos\requirements.txt
+
+    - name: Fetch Browser (camoufox)
+      run: |
+        cd C:\Users\runneradmin\Desktop\Camos
+        cmd /c "camoufox fetch"
+      shell: powershell
 
     - name: Run the program (npb.py)
       run: |
