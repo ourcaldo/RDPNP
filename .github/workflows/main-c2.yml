@@ -93,21 +93,24 @@ jobs:
         Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python npb.py --force'
       shell: powershell
 
-    - name: Run tunnel for 5h30m then restart
+    - name: Start Ngrok Tunnel
+      run: Start-Process .\ngrok\ngrok.exe -ArgumentList 'start --config .\ngrok\ngrok.yml --all'
+      shell: pwsh
+
+    - name: Wait for 5h30m
+      run: Start-Sleep -Seconds 19800
+      shell: pwsh
+
+    - name: Stop Ngrok Tunnel
+      run: Stop-Process -Name ngrok -Force
+      shell: pwsh
+
+    - name: Wait 60 seconds before re-dispatch
+      run: Start-Sleep -Seconds 60
+      shell: pwsh
+
+    - name: Re-dispatch workflow
       run: |
-        # Start ngrok
-        Start-Process .\ngrok\ngrok.exe -ArgumentList 'start --config .\ngrok\ngrok.yml --all'
-        
-        # Wait exactly 5h30m
-        Start-Sleep -Seconds 19800
-        
-        # Kill ngrok
-        Stop-Process -Name ngrok -Force
-        
-        # Wait 60s
-        Start-Sleep -Seconds 60
-        
-        # Restart workflow
         curl -X POST `
           -H "Authorization: token ${{ secrets.PERSONAL_TOKEN }}" `
           -d '{"event-type": "redeploy"}' `
