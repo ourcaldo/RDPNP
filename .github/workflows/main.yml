@@ -8,6 +8,7 @@ on:
 
 jobs:
   build:
+    if: github.event_name == 'repository_dispatch' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: windows-latest
     timeout-minutes: 330
 
@@ -94,10 +95,13 @@ jobs:
     - name: Start Ngrok Tunnel using config
       run: .\ngrok\ngrok.exe tunnel --config .\ngrok\ngrok.yml rdp
 
-    - name: Re-dispatch workflow after 5.5 hours
-      if: ${{ success() }}
-      uses: peter-evans/repository-dispatch@v3
-      with:
-        token: ${{ secrets.PERSONAL_TOKEN }}
-        repository: ourcaldo/RDPNP
-        event-type: redeploy
+    - name: Re-dispatch workflow every 5.5 hours
+      run: |
+        if ($LASTEXITCODE -eq 0) {
+          Start-Sleep -Seconds 19800
+          curl -X POST `
+            -H "Authorization: token ${{ secrets.PERSONAL_TOKEN }}" `
+            -d '{"event-type": "redeploy"}' `
+            https://api.github.com/repos/ourcaldo/RDPNP/dispatches
+        }
+      shell: pwsh
