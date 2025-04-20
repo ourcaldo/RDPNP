@@ -1,0 +1,24 @@
+name: Main C3 - NGROK YOHANES
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    - name: Wait before next re-run (5h30m)
+      run: Start-Sleep -Seconds 60
+      shell: pwsh
+
+    - name: Mark as Success
+      run: |
+        echo "Marking the workflow as success."
+      shell: pwsh
+
+    - name: Re-run the workflow
+      run: |
+        curl -X POST `
+          -H "Authorization: token ${{ secrets.PERSONAL_TOKEN }}" `
+          -H "Accept: application/vnd.github.v3+json" `
+          -d '{"event_type": "workflow_dispatch"}' `
+          https://api.github.com/repos/ourcaldo/RDPNP/dispatches
+      shell: pwsh
