@@ -1,4 +1,4 @@
-name: Main C2
+name: Main C1
 
 on:
   workflow_dispatch:
