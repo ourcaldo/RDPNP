@@ -96,27 +96,6 @@ jobs:
     - name: Start Ngrok Tunnel
       run: Start-Process .\ngrok\ngrok.exe -ArgumentList 'start --all --config .\ngrok\ngrok.yml --all'
       shell: pwsh
-
-    - name: Show Ngrok Hostname Only
-      run: |
-        Start-Sleep -Seconds 5
-        $tunnels = .\ngrok.exe tunnels list --config .\ngrok.yml
-        $hostname = ($tunnels | Select-String -Pattern 'tcp://.*').Matches.Value
-        Write-Host "Ngrok Hostname: $hostname"
-      working-directory: .\ngrok
-      shell: pwsh
-
-    - name: Wait for 5h30m
-      run: Start-Sleep -Seconds 19800
-      shell: pwsh
-
-    - name: Stop Ngrok Tunnel
-      run: Stop-Process -Name ngrok -Force
-      shell: pwsh
-
-    - name: Wait 60 seconds before re-dispatch
-      run: Start-Sleep -Seconds 60
-      shell: pwsh
       
     - name: Re-dispatch workflow
       run: |
