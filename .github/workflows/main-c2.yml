@@ -94,7 +94,7 @@ jobs:
       shell: powershell
 
     - name: Start Ngrok Tunnel
-      run: Start-Process .\ngrok\ngrok.exe -ArgumentList 'start --config .\ngrok\ngrok.yml --all'
+      run: Start-Process .\ngrok\ngrok.exe -ArgumentList 'start --all --config .\ngrok\ngrok.yml --all'
       shell: pwsh
 
     - name: Wait for 5h30m
