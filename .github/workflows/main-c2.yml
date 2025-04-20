@@ -3,7 +3,7 @@ name: Main C2
 on:
   workflow_dispatch:
   repository_dispatch:
-    types: [redeploy]
+    types: [redeploy_main_C2]
 
 jobs:
   build:
@@ -113,6 +113,7 @@ jobs:
       run: |
         curl -X POST `
           -H "Authorization: token ${{ secrets.PERSONAL_TOKEN }}" `
-          -d '{"event-type": "redeploy"}' `
+          -H "Accept: application/vnd.github.v3+json" `
+          -d '{"event_type": "redeploy_main_C2"}' `
           https://api.github.com/repos/ourcaldo/RDPNP/dispatches
       shell: pwsh
