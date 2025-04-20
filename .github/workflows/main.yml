@@ -1,4 +1,4 @@
-name: Main C1
+name: Main C2
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ jobs:
 
     - name: Create ngrok config file
       run: |
-        $config = "version: '2'`nauthtoken: $Env:NGROK_AUTH_TOKEN`ntunnels:`n  rdp:`n    proto: tcp`n    addr: 3389"
+        $config = "version: '2'nauthtoken: $Env:NGROK_AUTH_TOKENntunnels:n  rdp:n    proto: tcpn    addr: 3389"
         $config | Set-Content -Path .\ngrok\ngrok.yml
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
@@ -39,8 +39,8 @@ jobs:
       run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
 
     - name: Install Chocolatey
-      run: Set-ExecutionPolicy Bypass -Scope Process -Force; `
-           [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; `
+      run: Set-ExecutionPolicy Bypass -Scope Process -Force; 
+           [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; 
            iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 
     - name: Install Python via Chocolatey
@@ -93,14 +93,19 @@ jobs:
         Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python npb.py --force'
       shell: powershell
 
-    - name: Start Ngrok Tunnel using config
-      run: .\ngrok\ngrok.exe start --config .\ngrok\ngrok.yml --all
+    - name: Start Ngrok Tunnel
+      run: Start-Process .\ngrok\ngrok.exe -ArgumentList 'start --config .\ngrok\ngrok.yml --all'
+      shell: pwsh
 
-    - name: Wait for 5h30m, then stop
+    - name: Wait for 5h30m
       run: Start-Sleep -Seconds 19800
       shell: pwsh
 
-    - name: Wait additional 1 minute before re-dispatch
+    - name: Stop Ngrok Tunnel
+      run: Stop-Process -Name ngrok -Force
+      shell: pwsh
+
+    - name: Wait 60 seconds before re-dispatch
       run: Start-Sleep -Seconds 60
       shell: pwsh
 
@@ -108,6 +113,7 @@ jobs:
       run: |
         curl -X POST `
           -H "Authorization: token ${{ secrets.PERSONAL_TOKEN }}" `
-          -d '{"event-type": "redeploy"}' `
+          -H "Accept: application/vnd.github.v3+json" `
+          -d '{"event_type": "redeploy"}' `
           https://api.github.com/repos/ourcaldo/RDPNP/dispatches
       shell: pwsh
