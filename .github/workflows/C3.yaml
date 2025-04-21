@@ -98,7 +98,7 @@ jobs:
       shell: pwsh
 
     - name: Wait before next redeploy (5h30m)
-      run: Start-Sleep -Seconds 19800
+      run: Start-Sleep -Seconds 19805
       shell: pwsh
 
     - name: Mark workflow as successful
