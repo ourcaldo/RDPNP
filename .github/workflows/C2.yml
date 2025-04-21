@@ -3,7 +3,7 @@ name: Main C2
 on:
   workflow_dispatch:
   repository_dispatch:
-    types: [redeploy_main_C2]
+    types: [Main C2]
 
 jobs:
   build:
@@ -72,29 +72,29 @@ jobs:
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
       shell: pwsh
 
-    - name: Download Camos.zip to RDP Desktop
-      run: Invoke-WebRequest https://nexpocket.us12.cdn-alpha.com/Camos.zip -OutFile C:\Users\runneradmin\Desktop\Camos.zip
-
-    - name: Extract Camos.zip
-      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\Camos.zip -DestinationPath C:\Users\runneradmin\Desktop\Camos
+    - name: Download Camoufox.zip to RDP Desktop
+      run: Invoke-WebRequest "https://nexpocket.us12.cdn-alpha.com/Camoufox.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\Camoufox.zip
+      
+    - name: Extract Camoufox.zip
+      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\Camoufox.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
 
     - name: Install Requirements
-      run: pip install -r C:\Users\runneradmin\Desktop\Camos\requirements.txt
+      run: pip install -r C:\Users\runneradmin\Desktop\Camoufox\requirements.txt
 
     - name: Fetch Browser (camoufox)
       run: |
-        cd C:\Users\runneradmin\Desktop\Camos
+        cd C:\Users\runneradmin\Desktop\Camoufox
         cmd /c "camoufox fetch"
       shell: powershell
 
     - name: Run the program (npb.py)
       run: |
-        cd C:\Users\runneradmin\Desktop\Camos
-        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python npb.py --force'
+        cd C:\Users\runneradmin\Desktop\Camoufox
+        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python run.py --force'
       shell: powershell
 
     - name: Start Ngrok Tunnel
-      run: Start-Process .\ngrok\ngrok.exe -ArgumentList 'start --all --config .\ngrok\ngrok.yml --all'
+      run: Start-Process .\ngrok\ngrok.exe -ArgumentList 'start --all --config .\ngrok\ngrok.yml'
       shell: pwsh
 
     - name: Wait before next redeploy (5h30m)
