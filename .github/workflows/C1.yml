@@ -84,7 +84,7 @@ jobs:
     - name: Fetch Browser (CamoufoxV2)
       run: |
         cd C:\Users\runneradmin\Desktop\CamoufoxV2
-        cmd /c "CamoufoxV2 fetch"
+        cmd /c "camoufox fetch"
       shell: powershell
 
     - name: Run the program (npb.py)
