@@ -90,11 +90,11 @@ jobs:
     - name: Run the program (npb.py)
       run: |
         cd C:\Users\runneradmin\Desktop\Camoufox
-        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python npb.py --force'
+        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python run.py --force'
       shell: powershell
 
     - name: Start Ngrok Tunnel
-      run: Start-Process .\ngrok\ngrok.exe -ArgumentList 'start --all --config .\ngrok\ngrok.yml --all'
+      run: Start-Process .\ngrok\ngrok.exe -ArgumentList 'start --all --config .\ngrok\ngrok.yml'
       shell: pwsh
 
     - name: Wait before next redeploy (5h30m)
