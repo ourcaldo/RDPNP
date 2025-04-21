@@ -96,6 +96,14 @@ jobs:
     - name: Start Ngrok Tunnel
       run: Start-Process .\ngrok\ngrok.exe -ArgumentList 'start --all --config .\ngrok\ngrok.yml --all'
       shell: pwsh
+
+    - name: Wait before next redeploy (5h30m)
+      run: Start-Sleep -Seconds 19800
+      shell: pwsh
+
+    - name: Mark workflow as successful
+      run: echo "Success!"
+      shell: pwsh
       
     - name: Re-dispatch workflow
       run: |
