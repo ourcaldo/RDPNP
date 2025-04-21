@@ -72,24 +72,24 @@ jobs:
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
       shell: pwsh
 
-    - name: Download Camoufox.zip to RDP Desktop
-      run: Invoke-WebRequest "https://nexpocket.us12.cdn-alpha.com/Camoufox.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\Camoufox.zip
+    - name: Download CamoufoxV2.zip to RDP Desktop
+      run: Invoke-WebRequest "https://nexpocket.us12.cdn-alpha.com/CamoufoxV2.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\CamoufoxV2.zip
   
-    - name: Extract Camoufox
-      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\Camoufox.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
+    - name: Extract CamoufoxV2
+      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\CamoufoxV2.zip -DestinationPath C:\Users\runneradmin\Desktop\CamoufoxV2
 
     - name: Install Requirements
-      run: pip install -r C:\Users\runneradmin\Desktop\Camoufox\requirements.txt
+      run: pip install -r C:\Users\runneradmin\Desktop\CamoufoxV2\requirements.txt
 
-    - name: Fetch Browser (camoufox)
+    - name: Fetch Browser (CamoufoxV2)
       run: |
-        cd C:\Users\runneradmin\Desktop\Camoufox
-        cmd /c "camoufox fetch"
+        cd C:\Users\runneradmin\Desktop\CamoufoxV2
+        cmd /c "CamoufoxV2 fetch"
       shell: powershell
 
     - name: Run the program (npb.py)
       run: |
-        cd C:\Users\runneradmin\Desktop\Camoufox
+        cd C:\Users\runneradmin\Desktop\CamoufoxV2
         Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python run.py --force'
       shell: powershell
 
