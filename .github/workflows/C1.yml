@@ -3,7 +3,7 @@ name: Main C1
 on:
   workflow_dispatch:
   repository_dispatch:
-    types: [redeploy]
+    types: [Main C1]
 
 jobs:
   build:
@@ -72,24 +72,24 @@ jobs:
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
       shell: pwsh
 
-    - name: Download Camos.zip to RDP Desktop
-      run: Invoke-WebRequest https://nexpocket.us12.cdn-alpha.com/Camos.zip -OutFile C:\Users\runneradmin\Desktop\Camos.zip
-
-    - name: Extract Camos.zip
-      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\Camos.zip -DestinationPath C:\Users\runneradmin\Desktop\Camos
+    - name: Download Camoufox.zip to RDP Desktop
+      run: Invoke-WebRequest "https://nexpocket.us12.cdn-alpha.com/Camoufox.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\Camoufox.zip
+  
+    - name: Extract Camoufox
+      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\Camoufox.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
 
     - name: Install Requirements
-      run: pip install -r C:\Users\runneradmin\Desktop\Camos\requirements.txt
+      run: pip install -r C:\Users\runneradmin\Desktop\Camoufox\requirements.txt
 
     - name: Fetch Browser (camoufox)
       run: |
-        cd C:\Users\runneradmin\Desktop\Camos
+        cd C:\Users\runneradmin\Desktop\Camoufox
         cmd /c "camoufox fetch"
       shell: powershell
 
     - name: Run the program (npb.py)
       run: |
-        cd C:\Users\runneradmin\Desktop\Camos
+        cd C:\Users\runneradmin\Desktop\Camoufox
         Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python npb.py --force'
       shell: powershell
 
@@ -110,6 +110,6 @@ jobs:
         curl -X POST `
           -H "Authorization: token ${{ secrets.PERSONAL_TOKEN }}" `
           -H "Accept: application/vnd.github.v3+json" `
-          -d '{"event_type": "redeploy"}' `
+          -d '{"event_type": "Main C1"}' `
           https://api.github.com/repos/ourcaldo/RDPNP/dispatches
       shell: pwsh
