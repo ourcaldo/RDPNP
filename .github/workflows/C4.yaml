@@ -1,4 +1,4 @@
-name: Main C1 - HOTMAIL
+name: MAIN C4
 
 on:
   workflow_dispatch:
@@ -120,6 +120,6 @@ jobs:
         curl -X POST `
           -H "Authorization: token ${{ secrets.PERSONAL_TOKEN }}" `
           -H "Accept: application/vnd.github.v3+json" `
-          -d '{"event_type": "Main C1"}' `
+          -d '{"event_type": "Main C4"}' `
           https://api.github.com/repos/lilters/LRDP/dispatches
       shell: pwsh
