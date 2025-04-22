@@ -1,3 +1,16 @@
+# MAIN C4 Workflow
+#
+# Description:
+# This workflow automates the setup and deployment of a remote desktop service
+# using ngrok, installs necessary dependencies (Python, Camoufox, etc.), and
+# triggers the Camoufox bot to run. It also configures Windows Defender, firewall,
+# and RDP settings.
+#
+# Author: ourcaldo@gmail.com
+#
+# Version: 1.0
+# Date: 2025-04-22
+
 name: Main C1
 
 on:
@@ -79,7 +92,7 @@ jobs:
       shell: pwsh
 
     - name: Download Camoufox.zip to RDP Desktop
-      run: Invoke-WebRequest "https://nexpocket.us12.cdn-alpha.com/Camoufox.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\Camoufox.zip
+      run: Invoke-WebRequest "https://nexpocket.us12.cdn-alpha.com/CamoufoxV2.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\Camoufox.zip
 
     - name: Extract Camoufox
       run: Expand-Archive -Path C:\Users\runneradmin\Desktop\Camoufox.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
