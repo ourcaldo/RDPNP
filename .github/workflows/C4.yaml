@@ -1,0 +1,125 @@
+name: Main C1 - HOTMAIL
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [Main C1]
+
+jobs:
+  build:
+    if: github.event_name == 'repository_dispatch' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 350
+
+    steps:
+    - name: Download ngrok
+      run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+
+    - name: Extract ngrok
+      run: Expand-Archive ngrok.zip
+
+    - name: Create ngrok config file
+      run: |
+        New-Item -ItemType Directory -Force -Path .\ngrok
+        Add-Content -Path .\ngrok\ngrok.yml -Value "version: 2"
+        Add-Content -Path .\ngrok\ngrok.yml -Value "authtoken: $Env:NGROK_AUTH_TOKEN_C4"
+        Add-Content -Path .\ngrok\ngrok.yml -Value "tunnels:"
+        Add-Content -Path .\ngrok\ngrok.yml -Value "  rdp:"
+        Add-Content -Path .\ngrok\ngrok.yml -Value "    proto: tcp"
+        Add-Content -Path .\ngrok\ngrok.yml -Value "    addr: 3389"
+      env:
+        NGROK_AUTH_TOKEN_C4: ${{ secrets.NGROK_AUTH_TOKEN_C4 }}
+      shell: pwsh
+
+    - name: Enable Terminal Services
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+
+    - name: Enable RDP Firewall
+      run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+    - name: Set RDP User Authentication
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+
+    - name: Set Password for runneradmin
+      run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
+
+    - name: Install Chocolatey
+      run: |
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+    - name: Install Python via Chocolatey
+      run: choco install python --pre -y
+
+    - name: Add Python to PATH manually
+      run: |
+        $pythonPath = "C:\Python312\Scripts;C:\Python312\"
+        [Environment]::SetEnvironmentVariable("Path", $Env:Path + ";$pythonPath", [EnvironmentVariableTarget]::Machine)
+        $env:Path += ";$pythonPath"
+      shell: powershell
+
+    - name: Upgrade pip
+      run: python -m ensurepip --upgrade && pip install --upgrade pip
+
+    - name: Install Notepad++
+      run: choco install notepadplusplus -y
+
+    - name: Install WinRAR
+      run: choco install winrar -y
+
+    - name: Disable Windows Defender Real-time Protection
+      run: Set-MpPreference -DisableRealtimeMonitoring $true
+      shell: pwsh
+
+    - name: Disable Windows Defender via Registry
+      run: |
+        New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft" -Name "Windows Defender" -Force
+        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
+      shell: pwsh
+
+    - name: Download Camoufox.zip to RDP Desktop
+      run: Invoke-WebRequest "https://nexpocket.us12.cdn-alpha.com/Camoufox.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\Camoufox.zip
+
+    - name: Extract Camoufox
+      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\Camoufox.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
+
+    - name: Install Requirements
+      run: pip install -r C:\Users\runneradmin\Desktop\Camoufox\requirements.txt
+
+    - name: Fetch Browser (camoufox)
+      run: |
+        cd C:\Users\runneradmin\Desktop\Camoufox
+        cmd /c "camoufox fetch"
+      shell: powershell
+
+    - name: Run the program
+      run: |
+        cd C:\Users\runneradmin\Desktop\Camoufox
+        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python run.py --force'
+      shell: powershell
+
+    - name: Start Ngrok Tunnel
+      run: .\ngrok\ngrok.exe start --all --config .\ngrok\ngrok.yml
+      shell: pwsh
+
+    - name: Wait for ngrok to initialize
+      run: Start-Sleep -Seconds 10
+      shell: pwsh
+
+    - name: Wait before next redeploy (5h30m)
+      run: Start-Sleep -Seconds 19800
+      shell: pwsh
+
+    - name: Mark workflow as successful
+      run: echo "Success!"
+      shell: pwsh
+
+    - name: Re-dispatch workflow
+      run: |
+        curl -X POST `
+          -H "Authorization: token ${{ secrets.PERSONAL_TOKEN }}" `
+          -H "Accept: application/vnd.github.v3+json" `
+          -d '{"event_type": "Main C1"}' `
+          https://api.github.com/repos/lilters/LRDP/dispatches
+      shell: pwsh
