@@ -1,3 +1,16 @@
+# MAIN C4 Workflow
+#
+# Description:
+# This workflow automates the setup and deployment of a remote desktop service
+# using ngrok, installs necessary dependencies (Python, Camoufox, etc.), and
+# triggers the Camoufox bot to run. It also configures Windows Defender, firewall,
+# and RDP settings.
+#
+# Author: aldodkris@outlook.com
+#
+# Version: 1.0
+# Date: 2025-04-22
+
 name: MAIN C4
 
 on:
