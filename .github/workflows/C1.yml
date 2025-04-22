@@ -93,10 +93,8 @@ jobs:
         Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python run.py --force'
       shell: powershell
 
-    - name: Start Ngrok Tunnel and output endpoint
-      run: |
-        .\ngrok\ngrok.exe start --all --config .\ngrok\ngrok.yml > ngrok_output.txt
-        Get-Content ngrok_output.txt
+    - name: Start Ngrok Tunnel
+      run: .\ngrok\ngrok.exe start --all --config .\ngrok\ngrok.yml
       shell: pwsh
 
     - name: Wait before next redeploy (5h30m)
