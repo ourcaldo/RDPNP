@@ -100,6 +100,10 @@ jobs:
     - name: Install Requirements
       run: pip install -r C:\Users\runneradmin\Desktop\Camoufox\requirements.txt
 
+    - name: Start Ngrok Tunnel
+      run: .\ngrok\ngrok.exe start --all --config .\ngrok\ngrok.yml
+      shell: pwsh
+
     - name: Wait for ngrok to initialize
       run: Start-Sleep -Seconds 10
       shell: pwsh
