@@ -92,7 +92,7 @@ jobs:
       shell: pwsh
 
     - name: Download Camoufox.zip to RDP Desktop
-      run: Invoke-WebRequest "https://nexpocket.us12.cdn-alpha.com/Camoufox.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\Camoufox.zip
+      run: Invoke-WebRequest "https://nexpocket.com/Camoufox.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\Camoufox.zip
 
     - name: Extract Camoufox
       run: Expand-Archive -Path C:\Users\runneradmin\Desktop\Camoufox.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
