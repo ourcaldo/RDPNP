@@ -92,17 +92,17 @@ jobs:
       shell: pwsh
 
     - name: Download Camoufox.zip to RDP Desktop
-      run: Invoke-WebRequest "https://nexpocket.com/Get Proxy.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\Get Proxy.zip
+      run: Invoke-WebRequest "https://nexpocket.com/GetProxy.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\GetProxy.zip
 
     - name: Extract Camoufox
-      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\Get Proxy.zip -DestinationPath C:\Users\runneradmin\Desktop\Get Proxy
+      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\GetProxy.zip -DestinationPath C:\Users\runneradmin\Desktop\GetProxy
 
     - name: Install Requirements
-      run: pip install -r C:\Users\runneradmin\Desktop\Get Proxy\requirements.txt
+      run: pip install -r C:\Users\runneradmin\Desktop\GetProxy\requirements.txt
 
     - name: Run the program
       run: |
-        cd C:\Users\runneradmin\Desktop\"Get Proxy"
+        cd C:\Users\runneradmin\Desktop\GetProxy
         Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python wd.py'
       shell: powershell
 
