@@ -80,9 +80,6 @@ jobs:
         $env:Path += ";$pythonPath"
       shell: powershell
 
-    - name: Upgrade pip
-      run: python -m ensurepip --upgrade && python -m pip install --upgrade pip
-
     - name: Install Notepad++
       run: choco install notepadplusplus -y
 
