@@ -111,13 +111,13 @@ jobs:
     - name: Run the program
       run: |
         cd C:\Users\runneradmin\Desktop\GetProxy
-        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python proxy5.py'
+        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python wd.py'
       shell: powershell
 
     - name: Run the program
       run: |
         cd C:\Users\runneradmin\Desktop\GetProxy
-        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python mail.py'
+        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python mail2.py'
       shell: powershell
 
     - name: Start Ngrok Tunnel
