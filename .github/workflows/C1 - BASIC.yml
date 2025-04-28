@@ -114,12 +114,6 @@ jobs:
         Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python wd.py'
       shell: powershell
 
-    - name: Run the program
-      run: |
-        cd C:\Users\runneradmin\Desktop\GetProxy
-        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python mail2.py'
-      shell: powershell
-
     - name: Start Ngrok Tunnel
       run: .\ngrok\ngrok.exe start --all --config .\ngrok\ngrok.yml
       shell: pwsh
