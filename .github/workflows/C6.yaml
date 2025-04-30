@@ -105,18 +105,6 @@ jobs:
     - name: Install Requirements
       run: pip install -r C:\Users\runneradmin\Desktop\Camoufox\requirements.txt
 
-    - name: Fetch Browser (camoufox)
-      run: |
-        cd C:\Users\runneradmin\Desktop\Camoufox
-        cmd /c "camoufox fetch"
-      shell: powershell
-
-    - name: Run the program
-      run: |
-        cd C:\Users\runneradmin\Desktop\Camoufox
-        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python run.py --force'
-      shell: powershell
-
     - name: Start Ngrok Tunnel
       run: .\ngrok\ngrok.exe start --all --config .\ngrok\ngrok.yml
       shell: pwsh
