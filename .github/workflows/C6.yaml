@@ -1,16 +1,3 @@
-# MAIN C6 Workflow
-#
-# Description:
-# This workflow automates the setup and deployment of a remote desktop service
-# using ngrok, installs necessary dependencies (Python, Camoufox, etc.), and
-# triggers the Camoufox bot to run. It also configures Windows Defender, firewall,
-# and RDP settings.
-#
-# Author: cettaseowriter@gmail.com
-#
-# Version: 1.0
-# Date: 2025-04-22
-
 name: Main C6
 
 on:
@@ -33,13 +20,8 @@ jobs:
 
     - name: Create ngrok config file
       run: |
-        New-Item -ItemType Directory -Force -Path .\ngrok
-        Add-Content -Path .\ngrok\ngrok.yml -Value "version: 2"
-        Add-Content -Path .\ngrok\ngrok.yml -Value "authtoken: $Env:NGROK_AUTH_TOKEN_C6"
-        Add-Content -Path .\ngrok\ngrok.yml -Value "tunnels:"
-        Add-Content -Path .\ngrok\ngrok.yml -Value "  rdp:"
-        Add-Content -Path .\ngrok\ngrok.yml -Value "    proto: tcp"
-        Add-Content -Path .\ngrok\ngrok.yml -Value "    addr: 3389"
+        $config = "version: '2'`nauthtoken: $Env:NGROK_AUTH_TOKEN_C6`ntunnels:`n  rdp:`n    proto: tcp`n    addr: 3389"
+        $config | Set-Content -Path .\ngrok\ngrok.yml
       env:
         NGROK_AUTH_TOKEN_C6: ${{ secrets.NGROK_AUTH_TOKEN_C6 }}
       shell: pwsh
@@ -65,10 +47,9 @@ jobs:
       shell: powershell
 
     - name: Install Chocolatey
-      run: |
-        Set-ExecutionPolicy Bypass -Scope Process -Force
-        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
-        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+      run: Set-ExecutionPolicy Bypass -Scope Process -Force; `
+           [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; `
+           iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 
     - name: Install Python via Chocolatey
       run: choco install python --pre -y
@@ -96,21 +77,29 @@ jobs:
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
       shell: pwsh
 
-    - name: Download GUI.zip to RDP Desktop
-      run: Invoke-WebRequest "https://nexpocket.com/GUI.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\GUI.zip
-
-    - name: Extract Camoufox
-      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\GUI.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
+    - name: Download CamoufoxNPBasic-CA.zip to RDP Desktop
+      run: Invoke-WebRequest "https://nexpocket.com/CamoufoxNPBasic-CA.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\CamoufoxNPBasic-CA.zip
+      
+    - name: Extract CamoufoxNPBasic-CA.zip
+      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\CamoufoxNPBasic-CA.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
 
     - name: Install Requirements
       run: pip install -r C:\Users\runneradmin\Desktop\Camoufox\requirements.txt
 
-    - name: Start Ngrok Tunnel
-      run: .\ngrok\ngrok.exe start --all --config .\ngrok\ngrok.yml
-      shell: pwsh
+    - name: Fetch Browser (camoufox)
+      run: |
+        cd C:\Users\runneradmin\Desktop\Camoufox
+        cmd /c "camoufox fetch"
+      shell: powershell
 
-    - name: Wait for ngrok to initialize
-      run: Start-Sleep -Seconds 10
+    - name: Run the program (npb.py)
+      run: |
+        cd C:\Users\runneradmin\Desktop\Camoufox
+        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python run.py'
+      shell: powershell
+
+    - name: Start Ngrok Tunnel
+      run: Start-Process .\ngrok\ngrok.exe -ArgumentList 'start --all --config .\ngrok\ngrok.yml'
       shell: pwsh
 
     - name: Wait before next redeploy (5h30m)
