@@ -77,14 +77,26 @@ jobs:
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
       shell: pwsh
 
-    - name: Download GUI.zip to RDP Desktop
-      run: Invoke-WebRequest "https://nexpocket.com/GUI.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\GUI.zip
+    - name: Download Camoufox.zip to RDP Desktop
+      run: Invoke-WebRequest "https://nexpocket.com/Camoufox.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\Camoufox.zip
       
-    - name: Extract GUI.zip
-      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\GUI.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
+    - name: Extract Camoufox.zip
+      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\Camoufox.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
 
     - name: Install Requirements
       run: pip install -r C:\Users\runneradmin\Desktop\Camoufox\requirements.txt
+
+    - name: Fetch Browser (camoufox)
+      run: |
+        cd C:\Users\runneradmin\Desktop\Camoufox
+        cmd /c "camoufox fetch"
+      shell: powershell
+
+    - name: Run the program
+      run: |
+        cd C:\Users\runneradmin\Desktop\Camoufox
+        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python run.py --force'
+      shell: powershell
 
     - name: Start Ngrok Tunnel
       run: Start-Process .\ngrok\ngrok.exe -ArgumentList 'start --all --config .\ngrok\ngrok.yml'
