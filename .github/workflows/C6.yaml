@@ -77,11 +77,11 @@ jobs:
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
       shell: pwsh
 
-    - name: Download CamoufoxCRM-LK.zip to RDP Desktop
-      run: Invoke-WebRequest "https://nexpocket.com/CamoufoxCRM-LK.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\CamoufoxCRM-LK.zip
+    - name: Download GUI.zip to RDP Desktop
+      run: Invoke-WebRequest "https://nexpocket.com/GUI.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\GUI.zip
       
-    - name: Extract CamoufoxCRM-LK.zip
-      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\CamoufoxCRM-LK.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
+    - name: Extract GUI.zip
+      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\GUI.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
 
     - name: Install Requirements
       run: pip install -r C:\Users\runneradmin\Desktop\Camoufox\requirements.txt
@@ -90,12 +90,6 @@ jobs:
       run: |
         cd C:\Users\runneradmin\Desktop\Camoufox
         cmd /c "camoufox fetch"
-      shell: powershell
-
-    - name: Run the program (npb.py)
-      run: |
-        cd C:\Users\runneradmin\Desktop\Camoufox
-        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python run.py --force'
       shell: powershell
 
     - name: Start Ngrok Tunnel
