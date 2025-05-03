@@ -16,7 +16,7 @@ name: Main C7
 on:
   workflow_dispatch:
   repository_dispatch:
-    types: [Main C6]
+    types: [Main C7]
 
 jobs:
   build:
