@@ -122,6 +122,11 @@ jobs:
         cmd /c "camoufox fetch"
       shell: powershell
 
+    - name: Check public IP
+      run: |
+        curl http://ipinfo.io
+      shell: powershell
+      
     - name: Run the program
       run: |
         cd C:\Users\runneradmin\Desktop\Camoufox
