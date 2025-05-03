@@ -46,26 +46,30 @@ jobs:
         Remove-Item C:\secpol.cfg
       shell: powershell
 
-    - name: Install Chocolatey
-      run: Set-ExecutionPolicy Bypass -Scope Process -Force; `
-           [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; `
-           iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-
-    - name: Install Python via Chocolatey
-      run: choco install python --pre -y
-
+    - name: Install Python 3.12.3
+      run: |
+        Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.12.3/python-3.12.3-amd64.exe" -OutFile "python-installer.exe"
+        Start-Process "python-installer.exe" -Wait -ArgumentList "/quiet InstallAllUsers=1 PrependPath=1 Include_test=0"
+      shell: powershell
+    
     - name: Add Python to PATH manually
       run: |
-        $pythonPath = "C:\Python312\Scripts;C:\Python312\"
+        $pythonPath = "C:\Program Files\Python312\Scripts;C:\Program Files\Python312\"
         [Environment]::SetEnvironmentVariable("Path", $Env:Path + ";$pythonPath", [EnvironmentVariableTarget]::Machine)
         $env:Path += ";$pythonPath"
       shell: powershell
-
+    
     - name: Install Notepad++
-      run: choco install notepadplusplus -y
-
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/latest/download/npp.8.6.4.Installer.x64.exe" -OutFile "npp_installer.exe"
+        Start-Process ".\npp_installer.exe" -Wait -ArgumentList "/S"
+      shell: powershell
+    
     - name: Install WinRAR
-      run: choco install winrar -y
+      run: |
+        Invoke-WebRequest -Uri "https://www.rarlab.com/rar/winrar-x64-624.exe" -OutFile "winrar_installer.exe"
+        Start-Process ".\winrar_installer.exe" -Wait -ArgumentList "/S"
+      shell: powershell
 
     - name: Disable Windows Defender Real-time Protection
       run: Set-MpPreference -DisableRealtimeMonitoring $true
