@@ -1,34 +1,25 @@
-name: FORCE UPDATE FILE REFERENCES
+name: MANUAL FILE REFERENCE UPDATE
 on: 
-  workflow_dispatch:
-  push:
-    branches: [main]
+  workflow_dispatch:  # ONLY runs when manually triggered
 
 jobs:
-  force-update:
+  update:
     runs-on: ubuntu-latest
     steps:
-      - name: HARD CHECKOUT
+      - name: CHECKOUT CODE
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.PERSONAL_TOKEN }}
-          fetch-depth: 0
 
-      - name: EXECUTE REPLACEMENT
+      - name: UPDATE FILES IN WORKFLOW DIRECTORY
         run: |
+          cd ./workflow  # ENTER THE CORRECT DIRECTORY
           for i in {1..9}; do
             if [ -f "C$i.yaml" ]; then
               sed -i 's/Camoufox\.zip/CamoufoxNZ\.zip/g' "C$i.yaml"
-              echo "FORCE UPDATED C$i.yaml"
+              echo "UPDATED: workflow/C$i.yaml"
             else
-              echo "C$i.yaml NOT FOUND - SKIPPING"
+              echo "MISSING: workflow/C$i.yaml"
             fi
           done
-
-      - name: FORCE COMMIT CHANGES
-        run: |
-          git config --global user.name "GITHUB FORCE BOT"
-          git config --global user.email "force@github.com"
-          git add .
-          git commit -m "FORCED UPDATE: Replaced Camoufox.zip references" || true
-          git push --force
+          echo "IMPORTANT: Changes were made locally but NOT committed"
