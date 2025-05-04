@@ -25,13 +25,15 @@ jobs:
           done
 
       - name: Commit changes
+        env:
+          PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
 
           git add .github/workflows/C*.yaml
           git commit -m "Replace Camoufox.zip with CamoufoxNZ.zip in C1-C9.yaml" || echo "No changes to commit"
-          git push
-        env:
-          # Use personal token if default GITHUB_TOKEN has no push permission
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+
+          # Gunakan token untuk autentikasi push
+          git remote set-url origin https://x-access-token:${PERSONAL_TOKEN}@github.com/ourcaldo/RDPNP.git
+          git push origin main
