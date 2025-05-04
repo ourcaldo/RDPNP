@@ -1,6 +1,5 @@
-name: MANUAL FILE REFERENCE UPDATE
-on: 
-  workflow_dispatch:  # ONLY runs when manually triggered
+name: PERMANENT FILE UPDATER
+on: workflow_dispatch
 
 jobs:
   update:
@@ -10,16 +9,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.PERSONAL_TOKEN }}
+          fetch-depth: 0
 
-      - name: UPDATE FILES IN WORKFLOW DIRECTORY
+      - name: UPDATE AND COMMIT CHANGES
         run: |
-          cd .github/workflows  # ENTER THE CORRECT DIRECTORY
+          cd .github/workflows
           for i in {1..9}; do
-            if [ -f "C$i.yaml" ]; then
-              sed -i 's/Camoufox\.zip/CamoufoxNZ\.zip/g' "C$i.yaml"
-              echo "UPDATED: workflow/C$i.yaml"
-            else
-              echo "MISSING: workflow/C$i.yaml"
-            fi
+            [ -f "C$i.yaml" ] && sed -i 's/Camoufox\.zip/CamoufoxNZ\.zip/g' "C$i.yaml"
           done
-          echo "IMPORTANT: Changes were made locally but NOT committed"
+          
+          git config --global user.name "GitHub Updater"
+          git config --global user.email "updater@github.com"
+          git add .
+          git commit -m "PERMANENT UPDATE: Replaced Camoufox.zip references" || echo "No changes to commit"
+          git push
