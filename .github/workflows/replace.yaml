@@ -13,7 +13,7 @@ jobs:
 
       - name: UPDATE FILES IN WORKFLOW DIRECTORY
         run: |
-          cd ./workflow  # ENTER THE CORRECT DIRECTORY
+          cd .github/workflows  # ENTER THE CORRECT DIRECTORY
           for i in {1..9}; do
             if [ -f "C$i.yaml" ]; then
               sed -i 's/Camoufox\.zip/CamoufoxNZ\.zip/g' "C$i.yaml"
