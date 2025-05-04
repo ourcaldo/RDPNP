@@ -1,17 +1,34 @@
-name: Update File References
-on: workflow_dispatch
+name: FORCE UPDATE FILE REFERENCES
+on: 
+  workflow_dispatch:
+  push:
+    branches: [main]
+
 jobs:
-  update:
+  force-update:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: HARD CHECKOUT
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.PERSONAL_TOKEN }}
           fetch-depth: 0
 
-      - name: Update YAML files
+      - name: EXECUTE REPLACEMENT
         run: |
           for i in {1..9}; do
             if [ -f "C$i.yaml" ]; then
-              sed -i 's/Camoufox\.zip/C
+              sed -i 's/Camoufox\.zip/CamoufoxNZ\.zip/g' "C$i.yaml"
+              echo "FORCE UPDATED C$i.yaml"
+            else
+              echo "C$i.yaml NOT FOUND - SKIPPING"
+            fi
+          done
+
+      - name: FORCE COMMIT CHANGES
+        run: |
+          git config --global user.name "GITHUB FORCE BOT"
+          git config --global user.email "force@github.com"
+          git add .
+          git commit -m "FORCED UPDATE: Replaced Camoufox.zip references" || true
+          git push --force
