@@ -1,26 +1,50 @@
-name: Delete Workflow History and Stop Itself
+name: Stop All Workflows and Delete History
 
 on:
-  workflow_dispatch:  # Manually triggered
+  workflow_dispatch:  # Manual trigger
 
 jobs:
-  delete-workflows:
+  stop-and-delete-workflows:
     runs-on: ubuntu-latest
     steps:
-      - name: Delete all workflow runs
+      - name: Cancel all running workflows
         env:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
           REPO: ourcaldo/RDPNP
-          RUN_ID: ${{ github.run_id }}
         run: |
-          echo "Fetching all workflow runs in $REPO..."
+          echo "Fetching all running workflow runs in $REPO..."
 
-          # Fetch all workflow runs (up to 100)
+          # Get all workflow runs with status in_progress or queued
+          runs=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$REPO/actions/runs?status=in_progress&per_page=100" | jq '.workflow_runs[].id')
+
+          queued=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$REPO/actions/runs?status=queued&per_page=100" | jq '.workflow_runs[].id')
+
+          all_runs="$runs $queued"
+
+          if [ -z "$all_runs" ]; then
+            echo "No running or queued workflows found."
+          else
+            for run_id in $all_runs; do
+              echo "Cancelling workflow run ID: $run_id"
+              curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" \
+                "https://api.github.com/repos/$REPO/actions/runs/$run_id/cancel"
+            done
+          fi
+
+      - name: Delete all workflow history
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+          REPO: ourcaldo/RDPNP
+        run: |
+          echo "Deleting all workflow run histories in $REPO..."
+
           runs=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             "https://api.github.com/repos/$REPO/actions/runs?per_page=100" | jq '.workflow_runs[].id')
 
           if [ -z "$runs" ]; then
-            echo "No runs found!"
+            echo "No workflow runs to delete."
           else
             for run_id in $runs; do
               echo "Deleting workflow run ID: $run_id"
@@ -29,14 +53,4 @@ jobs:
             done
           fi
 
-          echo "✅ All workflow runs deleted!"
-
-      - name: Cancel this workflow
-        env:
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
-          REPO: ourcaldo/RDPNP
-          RUN_ID: ${{ github.run_id }}
-        run: |
-          echo "Cancelling the current workflow run: $RUN_ID"
-          curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/$REPO/actions/runs/$RUN_ID/cancel"
+          echo "✅ All workflow runs deleted and running workflows cancelled."
