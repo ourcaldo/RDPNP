@@ -1,30 +1,28 @@
-name: Replace Camoufox.zip in C YAMLs
+name: Replace Camoufox.zip with CamoufoxNZ.zip in C1–C9
 
 on:
   workflow_dispatch:
 
 jobs:
-  replace-camoufox:
+  replace-and-push:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Replace Camoufox.zip with CamoufoxNZ.zip in C1-C9.yaml
+      - name: Replace text in C1–C9.yaml
         run: |
-          for i in {1..9}
-          do
-            file=".github/workflows/C$i.yaml"
+          for i in {1..9}; do
+            file=".github/workflows/C${i}.yaml"
             if [ -f "$file" ]; then
               echo "🔧 Processing $file"
-              sed -i 's/Camoufox\.zip/CamoufoxNZ.zip/g' "$file"
+              sed -i 's/Camoufox.zip/CamoufoxNZ.zip/g' "$file"
             else
               echo "⚠️  File not found: $file"
             fi
           done
 
-      - name: Commit and push changes
+      - name: Commit and push changes using PERSONAL_TOKEN
         env:
           PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
         run: |
@@ -32,7 +30,6 @@ jobs:
           git config user.email "github-actions@users.noreply.github.com"
 
           git add .github/workflows/C*.yaml
-          git commit -m "Replace Camoufox.zip with CamoufoxNZ.zip in C1-C9.yaml" || echo "No changes to commit"
+          git commit -m "Replace Camoufox.zip with CamoufoxNZ.zip in C1–C9.yaml" || echo "No changes to commit"
 
-          git remote set-url origin https://x-access-token:$PERSONAL_TOKEN@github.com/ourcaldo/RDPNP.git
-          git push origin main
+          git push https://x-access-token:$PERSONAL_TOKEN@github.com/ourcaldo/RDPNP.git HEAD:main
