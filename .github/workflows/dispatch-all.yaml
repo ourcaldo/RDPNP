@@ -1,0 +1,25 @@
+name: Dispatch All C Workflows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  dispatch-all:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger C1 to C9 workflows
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+          REPO: ourcaldo/RDPNP
+        run: |
+          for i in {1..9}
+          do
+            file="C$i.yaml"
+            echo "Dispatching $file..."
+
+            curl -s -X POST \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              https://api.github.com/repos/$REPO/actions/workflows/$file/dispatches \
+              -d '{"ref":"main"}'
+          done
