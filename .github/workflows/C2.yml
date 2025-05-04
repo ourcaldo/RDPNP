@@ -73,7 +73,6 @@ jobs:
       shell: pwsh
 
     - name: Get current public IP
-      id: get_ip
       run: |
         curl http://ipinfo.io/ip
       shell: powershell
