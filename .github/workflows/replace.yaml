@@ -1,25 +1,17 @@
-name: Force Update File References
+name: Update File References
 on: workflow_dispatch
 jobs:
-  force-update:
+  update:
     runs-on: ubuntu-latest
     steps:
-      - name: Bruteforce Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.PERSONAL_TOKEN }}  # Using YOUR token name
-          fetch-depth: 0  # Required for force push
+          token: ${{ secrets.PERSONAL_TOKEN }}
+          fetch-depth: 0
 
-      - name: Nuclear Find-and-Replace
+      - name: Update YAML files
         run: |
           for i in {1..9}; do
-            [ -f "C$i.yaml" ] && sed -i 's/Camoufox\.zip/CamoufoxNZ\.zip/g' "C$i.yaml"
-          done
-
-      - name: Force Commit Changes
-        run: |
-          git config --global user.name "OverrideBot"
-          git config --global user.email "override@example.com"
-          git add .
-          git commit -m "FORCED UPDATE: Camoufox.zip replacement" || exit 0
-          git push --force
+            if [ -f "C$i.yaml" ]; then
+              sed -i 's/Camoufox\.zip/C
