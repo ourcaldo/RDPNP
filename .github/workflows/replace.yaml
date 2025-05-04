@@ -1,0 +1,37 @@
+name: Replace Camoufox.zip in C YAMLs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  replace-camoufox:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Replace Camoufox.zip with CamoufoxNZ.zip in C1-C9.yaml
+        run: |
+          for i in {1..9}
+          do
+            file=".github/workflows/C$i.yaml"
+            if [ -f "$file" ]; then
+              echo "🔧 Processing $file"
+              sed -i 's/Camoufox\.zip/CamoufoxNZ.zip/g' "$file"
+            else
+              echo "⚠️  File not found: $file"
+            fi
+          done
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+
+          git add .github/workflows/C*.yaml
+          git commit -m "Replace Camoufox.zip with CamoufoxNZ.zip in C1-C9.yaml" || echo "No changes to commit"
+          git push
+        env:
+          # Use personal token if default GITHUB_TOKEN has no push permission
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
