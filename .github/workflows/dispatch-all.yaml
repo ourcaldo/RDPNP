@@ -1,4 +1,4 @@
-name: Dispatch All C Workflows
+name: DISPATCHER
 
 on:
   workflow_dispatch:
