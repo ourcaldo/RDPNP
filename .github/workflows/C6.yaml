@@ -139,7 +139,7 @@ jobs:
     - name: Wait 60 seconds after PUT
       run: Start-Sleep -Seconds 60
       shell: powershell
-	  
+
     - name: Run the program
       run: |
         cd C:\Users\runneradmin\Desktop\Camoufox
