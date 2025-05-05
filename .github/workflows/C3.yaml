@@ -126,7 +126,7 @@ jobs:
     - name: Wait 60 seconds after PUT
       run: Start-Sleep -Seconds 60
       shell: powershell
-	  
+
     - name: Run the program (npb.py)
       run: |
         cd C:\Users\runneradmin\Desktop\Camoufox
