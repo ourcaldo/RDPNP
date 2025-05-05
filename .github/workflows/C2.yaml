@@ -92,6 +92,36 @@ jobs:
         cmd /c "camoufox fetch"
       shell: powershell
 
+    - name: Get current public IP
+      id: get_ip
+      run: |
+        $ip = curl http://ipinfo.io/ip
+        echo "ip=$ip" >> $env:GITHUB_OUTPUT
+      shell: powershell
+
+    - name: Get existing authorized IPs from Shifter
+      id: get_authorized
+      run: |
+        $response = Invoke-RestMethod -Uri "https://shifter.io/api/v1/backconnect/OkDa/authorized-ips/?api_token=mhIlTYRtOvp7GrQa87JqKlZHkZd32pxQE0xHfucakXvhn8wj5WkoPwtYah7CF9nL" -Method Get
+        $ips = $response.data + "${{ steps.get_ip.outputs.ip }}"
+        $ips | Out-File -FilePath ips.json -Encoding utf8
+        $json = @{ ips = $ips } | ConvertTo-Json -Depth 2
+        Set-Content -Path "body.json" -Value $json
+      shell: powershell
+
+    - name: PUT updated IPs to Shifter
+      run: |
+        $body = Get-Content -Raw -Path "body.json"
+        Invoke-RestMethod -Uri "https://shifter.io/api/v1/backconnect/OkDa/authorized-ips/?api_token=mhIlTYRtOvp7GrQa87JqKlZHkZd32pxQE0xHfucakXvhn8wj5WkoPwtYah7CF9nL" `
+          -Method Put `
+          -ContentType "application/json" `
+          -Body $body
+      shell: powershell
+
+    - name: Wait 60 seconds after PUT
+      run: Start-Sleep -Seconds 60
+      shell: powershell
+      
     - name: Run the program (npb.py)
       run: |
         cd C:\Users\runneradmin\Desktop\Camoufox
