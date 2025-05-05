@@ -1,4 +1,4 @@
-name: PERMANENT FILE UPDATER
+name: UPDATER
 on: workflow_dispatch
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
         run: |
           cd .github/workflows
           for i in {1..9}; do
-            [ -f "C$i.yaml" ] && sed -i 's/CamoufoxNZ\.zip/Camoufox\.zip/g' "C$i.yaml"
+            [ -f "C$i.yaml" ] && sed -i 's/Camoufox\.zip/CamoufoxX\.zip/g' "C$i.yaml"
           done
           
           git config --global user.name "GitHub Updater"
