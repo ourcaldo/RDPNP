@@ -78,7 +78,7 @@ jobs:
       shell: powershell
 
     - name: Download CamoufoxNP.zip to RDP Desktop
-      run: Invoke-WebRequest "https://nexpocket.com/CamoufoxNP.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\CamoufoxNP.zip
+      run: Invoke-WebRequest "https://nexpocket.b-cdn.net/CamoufoxNP.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\CamoufoxNP.zip
       
     - name: Extract CamoufoxNP.zip
       run: Expand-Archive -Path C:\Users\runneradmin\Desktop\CamoufoxNP.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox

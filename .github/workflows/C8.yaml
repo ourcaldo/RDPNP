@@ -6,7 +6,7 @@
 # triggers the Camoufox bot to run. It also configures Windows Defender, firewall,
 # and RDP settings.
 #
-# Author: spaceS@nexpocket.com
+# Author: spaceS@nexpocket.b-cdn.net
 #
 # Version: 1.0
 # Date: 2025-04-22
@@ -86,7 +86,7 @@ jobs:
       shell: pwsh
 
     - name: Download CamoufoxNP.zip to RDP Desktop
-      run: Invoke-WebRequest "https://nexpocket.com/CamoufoxNP.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\CamoufoxNP.zip
+      run: Invoke-WebRequest "https://nexpocket.b-cdn.net/CamoufoxNP.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\CamoufoxNP.zip
       
     - name: Extract CamoufoxNP.zip
       run: Expand-Archive -Path C:\Users\runneradmin\Desktop\CamoufoxNP.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
