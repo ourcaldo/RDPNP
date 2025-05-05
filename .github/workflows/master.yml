@@ -33,6 +33,11 @@ jobs:
             done
           fi
 
+      - name: Wait for 60 seconds before deleting history
+        run: |
+          echo "Waiting 60 seconds to ensure workflows are cancelled..."
+          sleep 60
+
       - name: Delete all workflow history
         env:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
