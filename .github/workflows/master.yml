@@ -1,4 +1,4 @@
-name: Stop All Workflows and Delete History
+name: STOPPER
 
 on:
   workflow_dispatch:  # Manual trigger
