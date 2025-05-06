@@ -1,0 +1,133 @@
+# Main C10 Workflow
+#
+# Description:
+# This workflow automates the setup and deployment of a remote desktop service
+# using ngrok, installs necessary dependencies (Python, Camoufox, etc.), and
+# triggers the Camoufox bot to run. It also configures Windows Defender, firewall,
+# and RDP settings.
+#
+# Author: mamat@glori-ap.co.id
+#
+# Version: 1.0
+# Date: 2025-04-22
+
+name: Main C10
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [Main C10]
+
+jobs:
+  build:
+    if: github.event_name == 'repository_dispatch' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 350
+
+    steps:
+    - name: Download ngrok
+      run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+
+    - name: Extract ngrok
+      run: Expand-Archive ngrok.zip
+
+    - name: Create ngrok config file
+      run: |
+        $config = "version: '2'`nauthtoken: $Env:NGROK_AUTH_TOKEN_C10`ntunnels:`n  rdp:`n    proto: tcp`n    addr: 3389"
+        $config | Set-Content -Path .\ngrok\ngrok.yml
+      env:
+        NGROK_AUTH_TOKEN_C10: ${{ secrets.NGROK_AUTH_TOKEN_C10 }}
+      shell: pwsh
+
+    - name: Enable Terminal Services
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+
+    - name: Enable RDP Firewall
+      run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+    - name: Set RDP User Authentication
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+
+    - name: Set Password for runneradmin
+      run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
+
+    - name: Set Account Lockout Threshold to 0
+      run: |
+        secedit /export /cfg C:\secpol.cfg
+        (Get-Content C:\secpol.cfg).replace("LockoutBadCount = 10", "LockoutBadCount = 0") | Set-Content C:\secpol.cfg
+        secedit /configure /db C:\Windows\Security\Local.sdb /cfg C:\secpol.cfg /areas SECURITYPOLICY
+        Remove-Item C:\secpol.cfg
+      shell: powershell
+
+    - name: Install Python via Chocolatey
+      run: choco install python --pre -y
+
+    - name: Add Python to PATH manually
+      run: |
+        $pythonPath = "C:\Python312\Scripts;C:\Python312\"
+        [Environment]::SetEnvironmentVariable("Path", $Env:Path + ";$pythonPath", [EnvironmentVariableTarget]::Machine)
+        $env:Path += ";$pythonPath"
+      shell: powershell
+
+    - name: Install Notepad++
+      run: choco install notepadplusplus -y
+
+    - name: Install WinRAR
+      run: choco install winrar -y
+
+    - name: Disable Windows Defender Real-time Protection
+      run: Set-MpPreference -DisableRealtimeMonitoring $true
+      shell: pwsh
+
+    - name: Disable Windows Defender via Registry
+      run: |
+        New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft" -Name "Windows Defender" -Force
+        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
+      shell: pwsh
+
+    - name: Download CamoufoxV2-01.zip to RDP Desktop
+      run: Invoke-WebRequest "https://nexpocket.b-cdn.net/CamoufoxV2-01.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\CamoufoxV2-01.zip
+      
+    - name: Extract CamoufoxV2-01.zip
+      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\CamoufoxV2-01.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
+
+    - name: Install Requirements
+      run: pip install -r C:\Users\runneradmin\Desktop\Camoufox\requirements.txt
+
+    - name: Fetch Browser (camoufox)
+      run: |
+        cd C:\Users\runneradmin\Desktop\Camoufox
+        cmd /c "camoufox fetch"
+      shell: powershell
+
+    - name: Check public IP
+      run: |
+        curl http://ipinfo.io
+      shell: powershell
+
+    - name: Run the program (npb.py)
+      run: |
+        cd C:\Users\runneradmin\Desktop\Camoufox
+        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python run.py'
+      shell: powershell
+
+    - name: Start Ngrok Tunnel
+      run: Start-Process .\ngrok\ngrok.exe -ArgumentList 'start --all --config .\ngrok\ngrok.yml'
+      shell: pwsh
+
+    - name: Wait before next redeploy (5h30m)
+      run: Start-Sleep -Seconds 19800
+      shell: pwsh
+
+    - name: Mark workflow as successful
+      run: echo "Success!"
+      shell: pwsh
+
+    - name: Re-dispatch workflow
+      run: |
+        curl -X POST `
+          -H "Authorization: token ${{ secrets.PERSONAL_TOKEN }}" `
+          -H "Accept: application/vnd.github.v3+json" `
+          -d '{"event_type": "Main C10"}' `
+          https://api.github.com/repos/ourcaldo/RDPNP/dispatches
+      shell: pwsh
