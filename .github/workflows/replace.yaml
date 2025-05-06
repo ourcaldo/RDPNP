@@ -15,7 +15,7 @@ jobs:
         run: |
           cd .github/workflows
           for i in {1..9}; do
-            [ -f "C$i.yaml" ] && sed -i 's/Camoufox06052025\.zip/CamoufoxV5\.zip/g' "C$i.yaml"
+            [ -f "C$i.yaml" ] && sed -i 's/CamoufoxV5\.zip/CamoufoxV5-01\.zip/g' "C$i.yaml"
           done
           
           git config --global user.name "GitHub Updater"
