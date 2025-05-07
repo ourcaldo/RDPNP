@@ -20,8 +20,8 @@ jobs:
           cd .github/workflows
 
           # Define BEFORE and AFTER strings
-          Before="Camoufox55-1.zip"
-          After="Camoufox1-1.zip"
+          Before="Camoufox1-1.zip"
+          After="Camoufox55-3.zip"
 
           echo "Replacing all '$Before' with '$After'"
 
