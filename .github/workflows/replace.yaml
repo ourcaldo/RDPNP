@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - '.github/workflows/C*.yaml'
+      - '.github/workflows/replacer.yaml'
 
 jobs:
   update:
@@ -20,8 +20,8 @@ jobs:
           cd .github/workflows
 
           # Define BEFORE and AFTER strings
-          Before="Camoufox55-3.zip"
-          After="Camoufox55-4.zip"
+          Before="Camoufox55-4.zip"
+          After="Camoufox55-5.zip"
 
           echo "Replacing all '$Before' with '$After'"
 
