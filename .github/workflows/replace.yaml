@@ -1,5 +1,9 @@
 name: REPLACER
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/C*.yaml'
 
 jobs:
   update:
@@ -14,12 +18,23 @@ jobs:
       - name: UPDATE AND COMMIT CHANGES
         run: |
           cd .github/workflows
+
+          # Define BEFORE and AFTER strings
+          Before="Camoufox55-1.zip"
+          After="Camoufox1-1.zip"
+
+          echo "Replacing all '$Before' with '$After'"
+
           for i in {1..9}; do
-            [ -f "C$i.yaml" ] && sed -i 's/Camoufox55\.zip/Camoufox55-1\.zip/g' "C$i.yaml"
+            file="C$i.yaml"
+            if [ -f "$file" ]; then
+              echo "Updating $file"
+              sed -i "s/$Before/$After/g" "$file"
+            fi
           done
-          
+
           git config --global user.name "GitHub Updater"
           git config --global user.email "updater@github.com"
           git add .
-          git commit -m "PERMANENT UPDATE: Replaced Camoufox.zip references" || echo "No changes to commit"
+          git commit -m "Replaced $Before with $After" || echo "No changes to commit"
           git push
