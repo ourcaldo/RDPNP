@@ -25,7 +25,7 @@ jobs:
 
           echo "Replacing all '$Before' with '$After'"
 
-          for i in {1..9}; do
+          for i in {1..10}; do
             file="C$i.yaml"
             if [ -f "$file" ]; then
               echo "Updating $file"
