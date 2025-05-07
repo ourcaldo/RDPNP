@@ -12,7 +12,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
           REPO: ourcaldo/RDPNP
         run: |
-          for i in {1..9}
+          for i in {1..99}
           do
             for ext in yaml yml
             do
