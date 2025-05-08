@@ -1,4 +1,5 @@
 name: REPLACER
+
 on:
   workflow_dispatch:
   push:
@@ -15,26 +16,78 @@ jobs:
           token: ${{ secrets.PERSONAL_TOKEN }}
           fetch-depth: 0
 
-      - name: UPDATE AND COMMIT CHANGES
+      - name: DELETE BLOCK FROM FILES AND COMMIT CHANGES
         run: |
           cd .github/workflows
 
-          # Define BEFORE and AFTER strings
-          Before="Camoufox55-5.zip"
-          After="Camoufox55-6.zip"
+          # Save the exact block to delete into a temporary file
+          cat << 'EOF' > /tmp/delete_block.txt
+- name: Get current public IP
+  id: get_ip
+  run: |
+    $ip = curl http://ipinfo.io/ip
+    echo "ip=$ip" >> $env:GITHUB_OUTPUT
+  shell: powershell
 
-          echo "Replacing all '$Before' with '$After'"
+- name: Get existing authorized IPs from Shifter
+  id: get_authorized
+  run: |
+    $response = Invoke-RestMethod -Uri "https://shifter.io/api/v1/backconnect/OkDa/authorized-ips/?api_token=mhIlTYRtOvp7GrQa87JqKlZHkZd32pxQE0xHfucakXvhn8wj5WkoPwtYah7CF9nL" -Method Get
+    $ips = $response.data + "${{ steps.get_ip.outputs.ip }}"
+    $ips | Out-File -FilePath ips.json -Encoding utf8
+    $json = @{ ips = $ips } | ConvertTo-Json -Depth 2
+    Set-Content -Path "body.json" -Value $json
+  shell: powershell
 
+- name: PUT updated IPs to Shifter
+  run: |
+    $body = Get-Content -Raw -Path "body.json"
+    Invoke-RestMethod -Uri "https://shifter.io/api/v1/backconnect/OkDa/authorized-ips/?api_token=mhIlTYRtOvp7GrQa87JqKlZHkZd32pxQE0xHfucakXvhn8wj5WkoPwtYah7CF9nL" `
+      -Method Put `
+      -ContentType "application/json" `
+      -Body $body
+  shell: powershell
+
+- name: Wait 60 seconds after PUT
+  run: Start-Sleep -Seconds 60
+  shell: powershell
+EOF
+
+          # Loop through each C1.yaml to C10.yaml
           for i in {1..10}; do
             file="C$i.yaml"
             if [ -f "$file" ]; then
-              echo "Updating $file"
-              sed -i "s/$Before/$After/g" "$file"
+              echo "Processing $file"
+
+              # Delete block using awk
+              awk '
+              BEGIN {del=0}
+              FNR==NR {pattern[NR]=$0; next}
+              {
+                line=$0
+                for (i in pattern) {
+                  if ($0 == pattern[i]) {
+                    matchStart=FNR
+                    for (j=0; j<length(pattern); j++) {
+                      getline tmp
+                      if (tmp != pattern[j+1]) {
+                        print line
+                        next
+                      }
+                    }
+                    for (k=0; k<length(pattern); k++) getline
+                    next
+                  }
+                }
+                print
+              }
+              ' /tmp/delete_block.txt "$file" > "$file.tmp" && mv "$file.tmp" "$file"
             fi
           done
 
+          # Commit changes
           git config --global user.name "GitHub Updater"
           git config --global user.email "updater@github.com"
           git add .
-          git commit -m "Replaced $Before with $After" || echo "No changes to commit"
+          git commit -m "Deleted specific IP authorization block" || echo "No changes to commit"
           git push
