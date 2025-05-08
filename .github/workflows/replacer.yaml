@@ -20,8 +20,8 @@ jobs:
           cd .github/workflows
 
           # Define BEFORE and AFTER strings
-          Before="python run.py"
-          After="python run.py --force"
+          Before="Camoufox55-8.zip"
+          After="CamoufoxV2-2144.zip"
 
           echo "Replacing all '$Before' with '$After'"
 
