@@ -109,7 +109,7 @@ jobs:
     - name: Run the program (npb.py)
       run: |
         cd C:\Users\runneradmin\Desktop\Camoufox
-        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python run.py --force'
+        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python run.py'
       shell: powershell
 
     - name: Start Ngrok Tunnel
