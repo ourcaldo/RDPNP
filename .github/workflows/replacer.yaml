@@ -1,5 +1,4 @@
 name: REPLACER
-
 on:
   workflow_dispatch:
   push:
@@ -16,22 +15,26 @@ jobs:
           token: ${{ secrets.PERSONAL_TOKEN }}
           fetch-depth: 0
 
-      - name: DELETE BLOCK USING del.txt
+      - name: UPDATE AND COMMIT CHANGES
         run: |
           cd .github/workflows
-          
-          # Use perl to delete exact multi-line block from files
+
+          # Define BEFORE and AFTER strings
+          Before="Camoufox55-5.zip"
+          After="Camoufox55-6.zip"
+
+          echo "Replacing all '$Before' with '$After'"
+
           for i in {1..10}; do
             file="C$i.yaml"
             if [ -f "$file" ]; then
-              echo "Processing $file"
-              perl -i -pe 'BEGIN { undef $/; $block = `cat del.txt`; } s/\Q$block\E//g' "$file"
+              echo "Updating $file"
+              sed -i "s/$Before/$After/g" "$file"
             fi
           done
 
-          # Commit changes
           git config --global user.name "GitHub Updater"
           git config --global user.email "updater@github.com"
           git add .
-          git commit -m "Removed IP authorization steps" || echo "No changes to commit"
+          git commit -m "Replaced $Before with $After" || echo "No changes to commit"
           git push
