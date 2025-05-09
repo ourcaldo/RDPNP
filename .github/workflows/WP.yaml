@@ -64,6 +64,11 @@ jobs:
       run: |
         echo "${{ secrets.AIVEN_CA_CERT }}" > /tmp/ca.pem
 
+    - name: Trigger WordPress Installation (First Run)
+      run: |
+        # Simulate the first run by accessing WordPress setup
+        curl -s -o /dev/null -w "%{http_code}" http://localhost/wp-admin/install.php?step=1
+
     - name: Install UpdraftPlus Plugin
       run: |
         cd /var/www/html/wp-content/plugins/
