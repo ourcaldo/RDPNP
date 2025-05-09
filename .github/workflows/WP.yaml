@@ -60,10 +60,10 @@ jobs:
 
     - name: Create Updraft Folder and Download Backup Files
       run: |
-        mkdir -p /var/www/html/wp-content/updraft
+        sudo mkdir -p /var/www/html/wp-content/updraft
         cd /var/www/html/wp-content/updraft
         for part in plugins plugins2 plugins3 plugins4 themes uploads uploads2 uploads3 uploads4 uploads5 uploads6 uploads7 uploads8 uploads9 uploads10 uploads11 uploads12 db.gz; do
-          wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-$part
+          sudo wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-$part
         done
         sudo chown -R www-data:www-data /var/www/html/wp-content/updraft
 
