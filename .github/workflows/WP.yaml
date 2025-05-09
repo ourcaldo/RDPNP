@@ -36,11 +36,24 @@ jobs:
         sudo chmod -R 755 /var/www/html/
         sudo cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php
 
+    - name: Generate Random Database Name
+      id: generate_db
+      run: |
+        DB_NAME="wordpress_$(openssl rand -hex 6)"
+        echo "Random Database Name: $DB_NAME"
+        echo "DB_NAME=$DB_NAME" >> $GITHUB_ENV
+
+    - name: Create Random Database on Remote MySQL
+      run: |
+        mysql -h nexdb-nexus88.d.aivencloud.com -P 28185 -u avnadmin -p${{ secrets.AVN_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
+        echo "Database '$DB_NAME' created successfully."
+
     - name: Configure wp-config.php for Remote MySQL
       run: |
-        sudo sed -i "s/database_name_here/defaultdb/" /var/www/html/wp-config.php
+        # Update wp-config.php with correct remote MySQL connection details
+        sudo sed -i "s/database_name_here/${DB_NAME}/" /var/www/html/wp-config.php
         sudo sed -i "s/username_here/avnadmin/" /var/www/html/wp-config.php
-        sudo sed -i "s/password_here/AVNS_BTIvo47-3B9BKcAf2X7/" /var/www/html/wp-config.php
+        sudo sed -i "s/password_here/${{ secrets.AVN_PASSWORD }}/" /var/www/html/wp-config.php
         echo "define('DB_HOST', 'nexdb-nexus88.d.aivencloud.com:28185');" | sudo tee -a /var/www/html/wp-config.php
         echo "define('MYSQL_CLIENT_FLAGS', MYSQLI_CLIENT_SSL);" | sudo tee -a /var/www/html/wp-config.php
         echo "define('DB_SSL_KEY', '/tmp/client-key.pem');" | sudo tee -a /var/www/html/wp-config.php
