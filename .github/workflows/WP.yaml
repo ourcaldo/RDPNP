@@ -38,32 +38,29 @@ jobs:
         sudo apt install -y apache2 mysql-server php libapache2-mod-php php-mysql php-curl php-gd php-mbstring php-xml php-xmlrpc php-soap php-intl php-zip
         sudo systemctl start apache2
         sudo systemctl start mysql
-
+        
     - name: Configure MySQL
       run: |
-        # Stop MySQL if running to reset root auth
+        # Ensure MySQL directory exists
+        sudo mkdir -p /var/run/mysqld
+        sudo chown mysql:mysql /var/run/mysqld
+        
+        # Completely reset MySQL authentication
         sudo systemctl stop mysql || true
-        
-        # Start MySQL without authentication
-        sudo mysqld_safe --skip-grant-tables &
-        sleep 5
-        
-        # Reset root password
-        mysql -u root -e "FLUSH PRIVILEGES;"
-        mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root';"
-        mysql -u root -e "FLUSH PRIVILEGES;"
-        
-        # Restart MySQL normally
-        sudo pkill mysqld
-        sleep 2
+        sudo rm -rf /var/lib/mysql/*
+        sudo mysqld --initialize-insecure --user=mysql
         sudo systemctl start mysql
         
-        # Now create database and user with proper authentication
+        # Set root password
+        mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root';"
+        mysql -u root -proot -e "FLUSH PRIVILEGES;"
+        
+        # Create database and user
         mysql -u root -proot -e "CREATE DATABASE wordpress;"
         mysql -u root -proot -e "CREATE USER 'wordpress'@'localhost' IDENTIFIED BY 'password';"
         mysql -u root -proot -e "GRANT ALL PRIVILEGES ON wordpress.* TO 'wordpress'@'localhost';"
         mysql -u root -proot -e "FLUSH PRIVILEGES;"
-
+        
     - name: Download and setup WordPress
       run: |
         sudo rm -rf /var/www/html/*
