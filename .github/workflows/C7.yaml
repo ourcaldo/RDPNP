@@ -6,7 +6,7 @@
 # triggers the Camoufox bot to run. It also configures Windows Defender, firewall,
 # and RDP settings.
 #
-# Author: space@storagenex.b-cdn.net
+# Author: space@nexstorage.b-cdn.net
 #
 # Version: 1.0
 # Date: 2025-04-22
@@ -91,7 +91,7 @@ jobs:
       shell: pwsh
 
     - name: Download CamoufoxV5-100525.zip to RDP Desktop
-      run: Invoke-WebRequest "https://storagenex.b-cdn.net/CamoufoxV5-100525.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\CamoufoxV5-100525.zip
+      run: Invoke-WebRequest "https://nexstorage.b-cdn.net/CamoufoxV5-100525.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\CamoufoxV5-100525.zip
       
     - name: Extract CamoufoxV5-100525.zip
       run: Expand-Archive -Path C:\Users\runneradmin\Desktop\CamoufoxV5-100525.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
