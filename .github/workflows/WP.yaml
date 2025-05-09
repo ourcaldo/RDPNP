@@ -1,157 +1,89 @@
-name: WordPress with Ngrok
+name: Deploy WordPress with Backup and UpdraftPlus
 
 on:
   workflow_dispatch:
-  repository_dispatch:
-    types: [wordpress-deploy]
 
 jobs:
-  build:
-    if: github.event_name == 'repository_dispatch' || github.event_name == 'workflow_dispatch'
+  deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 360
 
     steps:
-    - name: Update system and install dependencies
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+
+    - name: Install Apache, PHP, and Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y unzip wget curl php php-mysql php-gd php-curl php-xml php-mbstring php-zip php-fpm nginx mysql-client
-        
-    - name: Download ngrok
-      run: wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.zip -O ngrok.zip
-        
-    - name: Extract ngrok
-      run: unzip ngrok.zip && chmod +x ngrok
-        
-    - name: Configure ngrok
+        sudo apt-get install -y apache2 php php-mysql libapache2-mod-php unzip curl jq mysql-client
+
+    - name: Set PHP Limits
+      run: |
+        sudo sed -i 's/memory_limit = .*/memory_limit = 2048M/' /etc/php/*/apache2/php.ini
+        sudo sed -i 's/upload_max_filesize = .*/upload_max_filesize = 2048M/' /etc/php/*/apache2/php.ini
+        sudo sed -i 's/post_max_size = .*/post_max_size = 2048M/' /etc/php/*/apache2/php.ini
+        sudo sed -i 's/max_execution_time = .*/max_execution_time = 300/' /etc/php/*/apache2/php.ini
+        sudo sed -i 's/max_input_time = .*/max_input_time = 300/' /etc/php/*/apache2/php.ini
+        sudo a2enmod rewrite
+        sudo systemctl restart apache2
+
+    - name: Install WordPress
+      run: |
+        wget https://wordpress.org/latest.zip
+        unzip latest.zip
+        sudo cp -r wordpress/* /var/www/html/
+        sudo chown -R www-data:www-data /var/www/html/
+        sudo chmod -R 755 /var/www/html/
+        sudo cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php
+
+    - name: Configure wp-config.php for Remote MySQL
+      run: |
+        sudo sed -i "s/database_name_here/defaultdb/" /var/www/html/wp-config.php
+        sudo sed -i "s/username_here/avnadmin/" /var/www/html/wp-config.php
+        sudo sed -i "s/password_here/AVNS_BTIvo47-3B9BKcAf2X7/" /var/www/html/wp-config.php
+        echo "define('DB_HOST', 'nexdb-nexus88.d.aivencloud.com:28185');" | sudo tee -a /var/www/html/wp-config.php
+        echo "define('MYSQL_CLIENT_FLAGS', MYSQLI_CLIENT_SSL);" | sudo tee -a /var/www/html/wp-config.php
+        echo "define('DB_SSL_KEY', '/tmp/client-key.pem');" | sudo tee -a /var/www/html/wp-config.php
+        echo "define('DB_SSL_CERT', '/tmp/client-cert.pem');" | sudo tee -a /var/www/html/wp-config.php
+        echo "define('DB_SSL_CA', '/tmp/ca.pem');" | sudo tee -a /var/www/html/wp-config.php
+
+    - name: Save Remote SSL Certificate
+      run: |
+        echo "${{ secrets.AIVEN_CA_CERT }}" > /tmp/ca.pem
+
+    - name: Install UpdraftPlus Plugin
+      run: |
+        cd /var/www/html/wp-content/plugins/
+        sudo wget https://nexstorage.b-cdn.net/updraftplus-2.25.5.26.zip
+        sudo unzip updraftplus-2.25.5.26.zip
+        sudo chown -R www-data:www-data updraftplus
+
+    - name: Create Updraft Folder and Download Backup Files
+      run: |
+        mkdir -p /var/www/html/wp-content/updraft
+        cd /var/www/html/wp-content/updraft
+        for part in plugins plugins2 plugins3 plugins4 themes uploads uploads2 uploads3 uploads4 uploads5 uploads6 uploads7 uploads8 uploads9 uploads10 uploads11 uploads12 db.gz; do
+          wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-$part
+        done
+        sudo chown -R www-data:www-data /var/www/html/wp-content/updraft
+
+    - name: Install Ngrok
+      run: |
+        curl -s https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -o ngrok.tgz
+        tar -xzf ngrok.tgz
+        chmod +x ngrok
+        sudo mv ngrok /usr/local/bin
+
+    - name: Create Ngrok Config
       run: |
         mkdir -p ~/.ngrok2
-        echo "version: 2" > ~/.ngrok2/ngrok.yml
-        echo "authtoken: ${{ secrets.NGROK_AUTH_TOKEN }}" >> ~/.ngrok2/ngrok.yml
-        echo "tunnels:" >> ~/.ngrok2/ngrok.yml
-        echo "  wordpress:" >> ~/.ngrok2/ngrok.yml
-        echo "    proto: http" >> ~/.ngrok2/ngrok.yml
-        echo "    addr: 80" >> ~/.ngrok2/ngrok.yml
-        echo "    host_header: rewrite" >> ~/.ngrok2/ngrok.yml
-        echo "    subdomain: hip-specially-escargot" >> ~/.ngrok2/ngrok.yml
-        
-    - name: Start ngrok in background
-      run: ./ngrok start --all --config ~/.ngrok2/ngrok.yml > /dev/null &
-        
-    - name: Download and install WordPress
-      run: |
-        wget https://wordpress.org/latest.tar.gz
-        tar -xzvf latest.tar.gz
-        sudo mv wordpress /var/www/html/
-        sudo chown -R www-data:www-data /var/www/html/wordpress
-        sudo chmod -R 755 /var/www/html/wordpress
-        
-    - name: Configure PHP settings
-      run: |
-        sudo sed -i 's/memory_limit = .*/memory_limit = 512M/' /etc/php/*/fpm/php.ini
-        sudo sed -i 's/upload_max_filesize = .*/upload_max_filesize = 256M/' /etc/php/*/fpm/php.ini
-        sudo sed -i 's/post_max_size = .*/post_max_size = 256M/' /etc/php/*/fpm/php.ini
-        sudo sed -i 's/max_execution_time = .*/max_execution_time = 300/' /etc/php/*/fpm/php.ini
-        sudo systemctl restart php*-fpm
-        
-    - name: Configure Nginx
-      run: |
-        # Base64 encoded nginx configuration
-        NGINX_CONF="c2VydmVyIHsKICAgIGxpc3RlbiA4MDsKICAgIHNlcnZlcl9uYW1lIGxvY2FsaG9zdDsKICAgIHJvb3QgL3Zhci93d3cvaHRtbC93b3JkcHJlc3M7CiAgICBpbmRleCBpbmRleC5waHAgaW5kZXguaHRtbCBpbmRleC5odG07CgogICAgbG9jYXRpb24gLyB7CiAgICAgICAgdHJ5X2ZpbGVzICR1cmkgJHVyaS8gL2luZGV4LnBocD8kYXJnczsKICAgIH0KCiAgICBsb2NhdGlvbiB+IFwucGhwJCB7CiAgICAgICAgaW5jbHVkZSBzbmlwcGV0cy9mYXN0Y2dpLXBocC5jb25mOwogICAgICAgIGZhc3RjZ2lfcGFzcyB1bml4Oi9ydW4vcGhwL3BocCotZnBtLnNvY2s7CiAgICAgICAgZmFzdGNnaV9wYXJhbSBTQ1JJUFRfRklMRU5BTUUgJGRvY3VtZW50X3Jvb3QkZmFzdGNnaV9zY3JpcHRfbmFtZTsKICAgICAgICBpbmNsdWRlIGZhc3RjZ2lfcGFyYW1zOwogICAgfQp9Cg=="
-        
-        # Decode and write to file
-        echo "$NGINX_CONF" | base64 --decode | sudo tee /etc/nginx/sites-available/wordpress > /dev/null
-        
-        # Create symlink and restart nginx
-        sudo ln -sf /etc/nginx/sites-available/wordpress /etc/nginx/sites-enabled/
-        sudo nginx -t && sudo systemctl restart nginx
-        
-    - name: Create WordPress config
-      run: |
-        cd /var/www/html/wordpress
-        cp wp-config-sample.php wp-config.php
-        sudo sed -i "s/database_name_here/defaultdb/" wp-config.php
-        sudo sed -i "s/username_here/avnadmin/" wp-config.php
-        sudo sed -i "s/password_here/${{ secrets.AIVEN_DB_PASSWORD }}/" wp-config.php
-        sudo sed -i "s/localhost/nexdb-nexus88.d.aivencloud.com/" wp-config.php
-        sudo sed -i "s/'WP_DEBUG', false/'WP_DEBUG', true/" wp-config.php
-        
-        # Add SSL certificate configuration
-        sudo bash -c 'cat >> /var/www/html/wordpress/wp-config.php <<EOF
+        echo -e "version: 2\nauthtoken: ${{ secrets.NGROK_AUTH_TOKEN }}\ntunnels:\n  wordpress:\n    proto: http\n    addr: 80\n    domain: hip-specially-escargot.ngrok-free.app" > ~/.ngrok2/ngrok.yml
 
-/** SSL Configuration */
-define(\"MYSQL_CLIENT_FLAGS\", MYSQLI_CLIENT_SSL);
-define(\"MYSQL_SSL_CA\", \"
------BEGIN CERTIFICATE-----
-MIIETTCCArWgAwIBAgIUeg0LxdwgQHAtwsh1ScEAP0G59VkwDQYJKoZIhvcNAQEM
-BQAwQDE+MDwGA1UEAww1ZDRlMzMxMGEtOTIxYS00OTc5LWFlNzUtMDRkYjU2NDhl
-MWUyIEdFTiAxIFByb2amVjdCBDQTAeFw0yNTAyMTkyMjA2MDRaFw0zNTAyMTcyMj
-A2MDRaMEAxPjA8BgNVBAMMNWQ0ZTMzMTBhLTkyMWEtNDk3OS1hZTc1LTA0ZGI1Nj
-Q4ZTFlMiBHRk4gMSBQcm9qZWN0IENBMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMI
-IBigKCAYEA5J+SZoyZPIl6+cjPMpnp57aKXDSFNirv4ML8CHgR7hHgkmc4PZCIzs
-5zjg8fJoNA320Ucp5p5zWAEY7ClhVYOMYC8AVH49L9mZJSQCCzLrmI1jnExqdFPr
-6Vnla6EmRGoSttaTOS8RH5wsTg6kRLIg+tWmmqFpM/bQu9a+Bch0yoc9to/Mahoo
-7K2Be9/2N3gYFFpoRS007qxwTVDvrAftteJZwb60SXC5PH4sBmFvdQIuFnkOq42Q
-v+r8pZNIJKnlLf9VNSiecizoioONW98QzXhxa0g6md67c7v4WjG9u+yOgmdeRFxg
-cGJHEHzAMhBQlTbglGrmgLYlmOW3ZQByuqAZh6wGjDYr/n2DyYFPOFYIqbp9Q94X
-LWQ878WfYFrtX/C4kiYOyw7bM+LkiAxj+7Bn0Eecgp2G/FwAhq61FSYtxdmUSJfc
-ERZmvjVKE4fMliMHUdy45JS8KSWTXT0fUTbk+W6gdoGdR8NUPbYZZDSopH70CmKS
-yIO+daCuIQIDAQABoz8wPTAdBgNVHQ4EFgQU92nwSim5fqrE1StUKF7X18YNeBow
-DwYDVR0TBAgwBgEB/wIBADALBgNVHQ8EBAMCAQYwDQYJKoZIhvcNAQEMBQADggGB
-ALZ2MnhSVH/S5xw4dlCZgAEpamgB4S+W1haD/sopw+J27NUA6+kCYmHbP7FhUhZT
-tteYEA2dJgw/BUsfTmWzXzSRRT3cklezf6kNt2w9gBIVdham32f4OaplcFYNxyT8
-7s/KR7bUIVVUfqgvh9ToAWGjYYx9Jly7+OXXefJrAF8jWT8vslAL2OAXXUzpB9fU
-3ObkvLMoVM4DiHQDiBneU+WKGNicv8jXj0nYF9FYbU7FgBHLV6Y64kHpI4i/uGkC
-RQN6hlrsGACdR2E9wB0416bRFjhdXoVAnqd0DJrnQlU6da/ZYw494jjgNAg/LeEx
-ehmq81XtM5B0jojnZCK5bWSdV9fAl7J+OHZOY8FgRXDNBTJSLwH48t5SIuFM+U4t
-ll6UdIBVjlRegpki3be1Faeq6uDrBJeIh8MrZvTkR9i5sXDN244JlX4B4fnmY6CJ
-joHxTu+T2vE6UwAsZQ35biwdtF0X4xf5kwPnyIvkWT7gBSNKFgTgcdmTMQ6d0Ql5
-XQ==
------END CERTIFICATE-----
-\");
-EOF'
-        
-    - name: Download and install UpdraftPlus
+    - name: Start Ngrok Tunnel
       run: |
-        cd /var/www/html/wordpress/wp-content/plugins
-        wget https://nexstorage.b-cdn.net/updraftplus-2.25.5.26.zip -O updraftplus.zip
-        unzip updraftplus.zip
-        rm updraftplus.zip
-        
-    - name: Create wp-content/updraft directory
+        nohup ngrok start --all --config ~/.ngrok2/ngrok.yml > ngrok.log &
+        sleep 10
+
+    - name: Display Ngrok Public URL
       run: |
-        mkdir -p /var/www/html/wordpress/wp-content/updraft
-        sudo chown -R www-data:www-data /var/www/html/wordpress/wp-content/updraft
-        
-    - name: Download backup files
-      run: |
-        cd /var/www/html/wordpress/wp-content/updraft
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-plugins.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-plugins2.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-plugins3.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-plugins4.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-themes.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads10.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads11.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads12.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads2.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads3.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads4.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads5.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads6.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads7.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads8.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads9.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-db.gz
-        
-    - name: Wait before next redeploy (5h30m)
-      run: sleep 19800
-      
-    - name: Re-dispatch workflow
-      run: |
-        curl -X POST \
-          -H "Authorization: token ${{ secrets.PERSONAL_TOKEN }}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          -d '{"event_type": "wordpress-deploy"}' \
-          https://api.github.com/repos/${{ github.repository }}/dispatches
+        curl -s http://localhost:4040/api/tunnels | jq '.tunnels[] | {name, public_url}'
