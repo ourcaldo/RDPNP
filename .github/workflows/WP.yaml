@@ -88,3 +88,8 @@ jobs:
     - name: Display Ngrok Public URL
       run: |
         curl -s http://localhost:4040/api/tunnels | jq '.tunnels[] | {name, public_url}'
+
+    - name: Keep Runner Alive for 6 Hours
+      run: |
+        echo "Ngrok is running. Keeping the runner alive for 6 hours..."
+        tail -f /dev/null
