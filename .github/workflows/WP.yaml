@@ -11,11 +11,12 @@ jobs:
     timeout-minutes: 350
 
     steps:
-    - name: Install ngrok
+    - name: Install ngrok and dependencies
       run: |
         curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
         echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
-        sudo apt update && sudo apt install ngrok
+        sudo apt update
+        sudo apt install -y ngrok jq
 
     - name: Configure ngrok with custom domain
       run: |
@@ -38,20 +39,11 @@ jobs:
         sudo systemctl start apache2
         sudo systemctl start mysql
 
-    - name: Secure MySQL installation
+    - name: Configure MySQL securely
       run: |
+        sudo mysql -e "SET GLOBAL validate_password.policy=LOW;"
         sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root';"
         sudo mysql -e "FLUSH PRIVILEGES;"
-        sudo mysql_secure_installation --use-default --password=root <<EOF
-        y
-        y
-        y
-        y
-        y
-        EOF
-
-    - name: Create WordPress database
-      run: |
         sudo mysql -uroot -proot -e "CREATE DATABASE wordpress;"
         sudo mysql -uroot -proot -e "CREATE USER 'wordpress'@'localhost' IDENTIFIED BY 'password';"
         sudo mysql -uroot -proot -e "GRANT ALL PRIVILEGES ON wordpress.* TO 'wordpress'@'localhost';"
@@ -95,8 +87,12 @@ jobs:
       run: |
         ngrok start --all --config ~/.config/ngrok/ngrok.yml > /dev/null &
         sleep 10
-        curl http://localhost:4040/api/tunnels | jq -r '.tunnels[] | select(.name=="wordpress") | .public_url' > ngrok_url.txt
-        cat ngrok_url.txt
+
+    - name: Display Ngrok Public URL
+      run: |
+        curl -s http://localhost:4040/api/tunnels | jq '.tunnels[] | {name, public_url}'
+        echo "WordPress should be available at:"
+        curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[] | select(.name=="wordpress") | .public_url'
 
     - name: Wait before next redeploy (5h30m)
       run: sleep 19800
