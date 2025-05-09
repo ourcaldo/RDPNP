@@ -72,7 +72,7 @@ jobs:
         cp wp-config-sample.php wp-config.php
         sudo sed -i "s/database_name_here/defaultdb/" wp-config.php
         sudo sed -i "s/username_here/avnadmin/" wp-config.php
-        sudo sed -i "s/password_here/AVNS_BTIvo47-3B9BKcAf2X7/" wp-config.php
+        sudo sed -i "s/password_here/${{ secrets.AIVEN_DB_PASSWORD }}/" wp-config.php
         sudo sed -i "s/localhost/nexdb-nexus88.d.aivencloud.com/" wp-config.php
         sudo sed -i "s/'WP_DEBUG', false/'WP_DEBUG', true/" wp-config.php
         
