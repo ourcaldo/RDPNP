@@ -36,12 +36,10 @@ jobs:
         sudo chmod -R 755 /var/www/html/
         sudo cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php
 
-    - name: Generate Random Database Name
-      id: generate_db
+    - name: Create Random Database on Remote MySQL
       run: |
-        DB_NAME="wordpress_$(openssl rand -hex 6)"
-        echo "Random Database Name: $DB_NAME"
-        echo "DB_NAME=$DB_NAME" >> $GITHUB_ENV
+        mysql -h nexdb-nexus88.d.aivencloud.com -P 28185 -u avnadmin -p${{ secrets.AIVEN_DB_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
+        echo "Database '$DB_NAME' created successfully."
 
     - name: Create Random Database on Remote MySQL
       run: |
