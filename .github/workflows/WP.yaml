@@ -68,6 +68,10 @@ jobs:
         sudo wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-db.gz
         sudo chown -R www-data:www-data /var/www/html/wp-content/updraft
 
+    - name: Remove Apache Default Index
+      run: |
+        sudo rm -f /var/www/html/index.html
+
     - name: Install Ngrok
       run: |
         curl -s https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -o ngrok.tgz
