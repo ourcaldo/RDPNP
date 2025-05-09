@@ -38,12 +38,9 @@ jobs:
 
     - name: Create Random Database on Remote MySQL
       run: |
-        mysql -h nexdb-nexus88.d.aivencloud.com -P 28185 -u avnadmin -p${{ secrets.AIVEN_DB_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
-        echo "Database '$DB_NAME' created successfully."
-
-    - name: Create Random Database on Remote MySQL
-      run: |
-        mysql -h nexdb-nexus88.d.aivencloud.com -P 28185 -u avnadmin -p${{ secrets.AVN_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
+        DB_NAME="wordpress_$(openssl rand -hex 12)"
+        echo "Creating database: $DB_NAME"
+        mysql -h nexdb-nexus88.d.aivencloud.com -P 28185 -u avnadmin -p${{ secrets.AIVEN_DB_PASSWORD }} --skip-column-names -e "CREATE DATABASE IF NOT EXISTS \`$DB_NAME\`;"
         echo "Database '$DB_NAME' created successfully."
 
     - name: Configure wp-config.php for Remote MySQL
