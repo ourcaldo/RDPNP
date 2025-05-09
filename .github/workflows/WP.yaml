@@ -1,101 +1,110 @@
-name: Deploy WordPress with Backup and UpdraftPlus
+name: WordPress with ngrok (Ubuntu)
 
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [WordPress Setup]
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 350
 
     steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v3
-
-    - name: Install Apache, PHP, MySQL
+    - name: Install ngrok
       run: |
-        sudo apt-get update
-        sudo apt-get install -y apache2 php php-mysql libapache2-mod-php mysql-server unzip curl jq
+        curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+        echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+        sudo apt update && sudo apt install ngrok
 
-    - name: Set PHP Limits
+    - name: Configure ngrok with custom domain
+      run: |
+        mkdir -p ~/.config/ngrok/
+        cat > ~/.config/ngrok/ngrok.yml <<EOL
+        version: "2"
+        authtoken: ${{ secrets.NGROK_AUTH_TOKEN }}
+        tunnels:
+          wordpress:
+            proto: http
+            addr: 80
+            host_header: rewrite
+            subdomain: hip-specially-escargot
+        EOL
+
+    - name: Install LAMP stack
+      run: |
+        sudo apt update
+        sudo apt install -y apache2 mysql-server php libapache2-mod-php php-mysql php-curl php-gd php-mbstring php-xml php-xmlrpc php-soap php-intl php-zip
+        sudo systemctl start apache2
+        sudo systemctl start mysql
+
+    - name: Secure MySQL installation
+      run: |
+        sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root';"
+        sudo mysql -e "FLUSH PRIVILEGES;"
+        sudo mysql_secure_installation --use-default --password=root <<EOF
+        y
+        y
+        y
+        y
+        y
+        EOF
+
+    - name: Create WordPress database
+      run: |
+        sudo mysql -uroot -proot -e "CREATE DATABASE wordpress;"
+        sudo mysql -uroot -proot -e "CREATE USER 'wordpress'@'localhost' IDENTIFIED BY 'password';"
+        sudo mysql -uroot -proot -e "GRANT ALL PRIVILEGES ON wordpress.* TO 'wordpress'@'localhost';"
+        sudo mysql -uroot -proot -e "FLUSH PRIVILEGES;"
+
+    - name: Download and setup WordPress
+      run: |
+        sudo rm -rf /var/www/html/*
+        sudo wget https://wordpress.org/latest.tar.gz -O /var/www/latest.tar.gz
+        sudo tar -xzvf /var/www/latest.tar.gz -C /var/www/html --strip-components=1
+        sudo chown -R www-data:www-data /var/www/html
+        sudo chmod -R 755 /var/www/html
+
+    - name: Configure PHP settings
       run: |
         sudo sed -i 's/memory_limit = .*/memory_limit = 2048M/' /etc/php/*/apache2/php.ini
         sudo sed -i 's/upload_max_filesize = .*/upload_max_filesize = 2048M/' /etc/php/*/apache2/php.ini
         sudo sed -i 's/post_max_size = .*/post_max_size = 2048M/' /etc/php/*/apache2/php.ini
         sudo sed -i 's/max_execution_time = .*/max_execution_time = 300/' /etc/php/*/apache2/php.ini
-        sudo sed -i 's/max_input_time = .*/max_input_time = 300/' /etc/php/*/apache2/php.ini
-        sudo a2enmod rewrite
         sudo systemctl restart apache2
 
-    - name: Start MySQL and Configure Root Password
+    - name: Download and install UpdraftPlus
       run: |
-        sudo systemctl start mysql
-        sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'rootpass';"
-        sudo mysql -uroot -prootpass -e "CREATE DATABASE wordpress;"
-        sudo mysql -uroot -prootpass -e "CREATE USER 'wpuser'@'localhost' IDENTIFIED BY 'wppassword';"
-        sudo mysql -uroot -prootpass -e "GRANT ALL PRIVILEGES ON wordpress.* TO 'wpuser'@'localhost';"
-        sudo mysql -uroot -prootpass -e "FLUSH PRIVILEGES;"
+        sudo mkdir -p /var/www/html/wp-content/updraft
+        sudo wget https://nexstorage.b-cdn.net/updraftplus-2.25.5.26.zip -O /var/www/html/wp-content/plugins/updraftplus.zip
+        sudo unzip /var/www/html/wp-content/plugins/updraftplus.zip -d /var/www/html/wp-content/plugins/
+        sudo rm /var/www/html/wp-content/plugins/updraftplus.zip
 
-    - name: Install WordPress
+    - name: Download backup files
       run: |
-        wget https://wordpress.org/latest.zip
-        unzip latest.zip
-        sudo cp -r wordpress/* /var/www/html/
-        sudo chown -R www-data:www-data /var/www/html/
-        sudo chmod -R 755 /var/www/html/
-        sudo cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php
-        sudo sed -i "s/database_name_here/wordpress/" /var/www/html/wp-config.php
-        sudo sed -i "s/username_here/wpuser/" /var/www/html/wp-config.php
-        sudo sed -i "s/password_here/wppassword/" /var/www/html/wp-config.php
-
-    - name: Install UpdraftPlus Plugin
-      run: |
-        cd /var/www/html/wp-content/plugins/
-        sudo wget https://nexstorage.b-cdn.net/updraftplus-2.25.5.26.zip
-        sudo unzip updraftplus-2.25.5.26.zip
-        sudo chown -R www-data:www-data updraftplus
-
-    - name: Create Updraft Folder and Download Backup Files
-      run: |
-        mkdir -p /var/www/html/wp-content/updraft
         cd /var/www/html/wp-content/updraft
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-plugins.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-plugins2.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-plugins3.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-plugins4.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-themes.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads2.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads3.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads4.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads5.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads6.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads7.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads8.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads9.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads10.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads11.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads12.zip
-        wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-db.gz
-        sudo chown -R www-data:www-data /var/www/html/wp-content/updraft
+        sudo wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-plugins.zip
+        sudo wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-plugins2.zip
+        sudo wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-plugins3.zip
+        sudo wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-plugins4.zip
+        sudo wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-themes.zip
+        sudo wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-uploads.zip
+        sudo wget https://nexstorage.b-cdn.net/backup_2025-05-09-2116_CETTA_30a1d6969066-db.gz
 
-    - name: Install Ngrok
+    - name: Start ngrok tunnel
       run: |
-        curl -s https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -o ngrok.tgz
-        tar -xzf ngrok.tgz
-        chmod +x ngrok
-        sudo mv ngrok /usr/local/bin
-
-    - name: Create Ngrok Config
-      run: |
-        mkdir -p ~/.ngrok2
-        echo -e "version: 2\nauthtoken: ${{ secrets.NGROK_AUTH_TOKEN }}\ntunnels:\n  wordpress:\n    proto: http\n    addr: 80\n    domain: hip-specially-escargot.ngrok-free.app" > ~/.ngrok2/ngrok.yml
-
-    - name: Start Ngrok Tunnel
-      run: |
-        nohup ngrok start --all --config ~/.ngrok2/ngrok.yml > ngrok.log &
+        ngrok start --all --config ~/.config/ngrok/ngrok.yml > /dev/null &
         sleep 10
+        curl http://localhost:4040/api/tunnels | jq -r '.tunnels[] | select(.name=="wordpress") | .public_url' > ngrok_url.txt
+        cat ngrok_url.txt
 
-    - name: Display Ngrok Public URL
+    - name: Wait before next redeploy (5h30m)
+      run: sleep 19800
+
+    - name: Re-dispatch workflow
       run: |
-        curl -s http://localhost:4040/api/tunnels | jq '.tunnels[] | {name, public_url}'
+        curl -X POST \
+          -H "Authorization: token ${{ secrets.PERSONAL_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -d '{"event_type": "WordPress Setup"}' \
+          https://api.github.com/repos/${{ github.repository }}/dispatches
