@@ -20,8 +20,8 @@ jobs:
           cd .github/workflows
 
           # Define BEFORE and AFTER strings
-          Before=" --force"
-          After=""
+          Before="run.py"
+          After="run.py --force"
 
           echo "Replacing all '$Before' with '$After'"
 
