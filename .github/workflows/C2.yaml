@@ -77,11 +77,11 @@ jobs:
         curl http://ipinfo.io/ip
       shell: powershell
 
-    - name: Download CamoufoxV5-140525.zip to RDP Desktop
-      run: Invoke-WebRequest "https://nexstorage.b-cdn.net/CamoufoxV5-140525.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\CamoufoxV5-140525.zip
+    - name: Download CamoufoxV2-140525-4.zip to RDP Desktop
+      run: Invoke-WebRequest "https://nexstorage.b-cdn.net/CamoufoxV2-140525-4.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\CamoufoxV2-140525-4.zip
       
-    - name: Extract CamoufoxV5-140525.zip
-      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\CamoufoxV5-140525.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
+    - name: Extract CamoufoxV2-140525-4.zip
+      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\CamoufoxV2-140525-4.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
 
     - name: Install Requirements
       run: pip install -r C:\Users\runneradmin\Desktop\Camoufox\requirements.txt
