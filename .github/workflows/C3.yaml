@@ -77,11 +77,11 @@ jobs:
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
       shell: pwsh
 
-    - name: Download CamoufoxV3-200525.zip to RDP Desktop
-      run: Invoke-WebRequest "https://nexstorage.b-cdn.net/CamoufoxV3-200525.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\CamoufoxV3-200525.zip
+    - name: Download nexAdsV1.zip to RDP Desktop
+      run: Invoke-WebRequest "https://nexstorage.b-cdn.net/nexAdsV1.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\nexAdsV1.zip
 
-    - name: Extract CamoufoxV3-200525.zip
-      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\CamoufoxV3-200525.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
+    - name: Extract nexAdsV1.zip
+      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\nexAdsV1.zip -DestinationPath C:\Users\runneradmin\Desktop\Camoufox
 
     - name: Install Requirements
       run: pip install -r C:\Users\runneradmin\Desktop\Camoufox\requirements.txt
