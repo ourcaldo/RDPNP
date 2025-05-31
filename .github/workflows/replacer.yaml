@@ -20,8 +20,8 @@ jobs:
           cd .github/workflows
 
           # Define BEFORE and AFTER strings
-          Before="nexAdsV5.zip"
-          After="nexAdsV6.zip"
+          Before="nexAdsV6.zip"
+          After="nexAdsV7.zip"
 
           echo "Replacing all '$Before' with '$After'"
 
