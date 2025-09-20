@@ -1,26 +1,35 @@
-name: Ubuntu Server with Ngrok Domain
+# MAIN Ubuntu Workflow
+#
+# Description:
+# This workflow automates the setup of an Ubuntu SSH server
+# using ngrok with a reserved domain.
+#
+# Author: ourcaldo@gmail.com
+#
+# Version: 1.0
+# Date: 2025-09-21
+
+name: Main Ubuntu
 
 on:
   workflow_dispatch:
   repository_dispatch:
-    types: [ubuntu-server]
+    types: [Main Ubuntu]
 
 jobs:
   build:
+    if: github.event_name == 'repository_dispatch' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 350
 
     steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v3
-
-    - name: Install dependencies
+    - name: Update & Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y openssh-server curl unzip
         sudo systemctl enable ssh
         sudo systemctl start ssh
-        # Set password for runneradmin (you’ll log in with this)
+        # Set password for runneradmin
         echo "runneradmin:P@ssw0rd!" | sudo chpasswd
 
     - name: Download ngrok
@@ -29,26 +38,38 @@ jobs:
         tar -xvzf ngrok.tgz
         sudo mv ngrok /usr/local/bin/
 
-    - name: Configure ngrok with reserved domain
+    - name: Create ngrok config file
       run: |
         mkdir -p ~/.ngrok2
-        cat <<EOF > ~/.ngrok2/ngrok.yml
-        version: 2
-        authtoken: $NGROK_AUTH_TOKEN
-        tunnels:
-          ssh:
-            proto: tcp
-            addr: 22
-            hostname: lashonda-nonlaminated-jocelynn.ngrok-free.app
-        EOF
+        echo "version: 2" > ~/.ngrok2/ngrok.yml
+        echo "authtoken: $NGROK_AUTH_TOKEN" >> ~/.ngrok2/ngrok.yml
+        echo "tunnels:" >> ~/.ngrok2/ngrok.yml
+        echo "  ssh:" >> ~/.ngrok2/ngrok.yml
+        echo "    proto: tcp" >> ~/.ngrok2/ngrok.yml
+        echo "    addr: 22" >> ~/.ngrok2/ngrok.yml
+        echo "    hostname: lashonda-nonlaminated-jocelynn.ngrok-free.app" >> ~/.ngrok2/ngrok.yml
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
 
-    - name: Start ngrok tunnel
+    - name: Start ngrok Tunnel
       run: |
         nohup ngrok start --all --config ~/.ngrok2/ngrok.yml > ngrok.log 2>&1 &
         sleep 10
         curl --silent --show-error http://127.0.0.1:4040/api/tunnels || true
 
-    - name: Keep alive (5h30m)
+    - name: Check public IP
+      run: curl http://ipinfo.io
+
+    - name: Wait before next redeploy (5h30m)
       run: sleep 19800
+
+    - name: Mark workflow as successful
+      run: echo "Success!"
+
+    - name: Re-dispatch workflow
+      run: |
+        curl -X POST \
+          -H "Authorization: token ${{ secrets.PERSONAL_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -d '{"event_type": "Main Ubuntu"}' \
+          https://api.github.com/repos/${{ github.repository }}/dispatches
