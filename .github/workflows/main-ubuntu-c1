@@ -1,0 +1,96 @@
+# MAIN Ubuntu + ngrok (SSH) Workflow
+# Description:
+# This workflow automates starting an Ubuntu runner, enables SSH,
+# sets up ngrok TCP tunnel for SSH, and prints the SSH command.
+# Only triggers manually via "Run workflow" button.
+#
+# Author: ourcaldo@gmail.com
+# Version: 1.0
+# Date: 2025-09-21
+
+name: Main Ubuntu C1
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Update & install required packages
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y --no-install-recommends openssh-server curl unzip jq
+        sudo systemctl enable --now ssh
+
+    - name: Configure SSH user & allow password auth
+      run: |
+        echo "runner:P@ssw0rd!" | sudo chpasswd
+        sudo sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+        sudo sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config
+        sudo systemctl restart ssh
+
+    - name: Download & install ngrok
+      run: |
+        curl -sSL https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -o ngrok.tgz
+        tar -xzf ngrok.tgz
+        sudo mv ngrok /usr/local/bin/ngrok
+        sudo chmod +x /usr/local/bin/ngrok
+        /usr/local/bin/ngrok version
+
+    - name: Create ngrok config
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+      run: |
+        mkdir -p ~/.ngrok2
+        cat > ~/.ngrok2/ngrok.yml <<EOF
+authtoken: ${NGROK_AUTH_TOKEN}
+tunnels:
+  ssh:
+    proto: tcp
+    addr: 22
+EOF
+
+    - name: Start ngrok tunnel
+      run: |
+        nohup /usr/local/bin/ngrok start --config ~/.ngrok2/ngrok.yml ssh > ngrok.log 2>&1 &
+        sleep 10
+
+    - name: Get ngrok SSH endpoint
+      id: get_endpoint
+      run: |
+        API_JSON=$(curl -sS http://127.0.0.1:4040/api/tunnels)
+        PUBLIC_URL=$(echo "$API_JSON" | jq -r '.tunnels[]?.public_url' | grep '^tcp://')
+        if [ -z "$PUBLIC_URL" ]; then
+          PUBLIC_URL=$(grep -oE 'tcp://[[:alnum:].-]+:[0-9]+' ngrok.log | head -n1)
+        fi
+        HOSTPORT=${PUBLIC_URL#tcp://}
+        HOST=$(echo "$HOSTPORT" | cut -d: -f1)
+        PORT=$(echo "$HOSTPORT" | cut -d: -f2)
+        echo "==== NGROK TCP endpoint ===="
+        echo "SSH command: ssh runner@${HOST} -p ${PORT}"
+        echo "Password: P@ssw0rd!"
+        echo "============================"
+        echo "ssh_command=ssh runner@${HOST} -p ${PORT}" >> $GITHUB_OUTPUT
+        echo "ssh_host=${HOST}" >> $GITHUB_OUTPUT
+        echo "ssh_port=${PORT}" >> $GITHUB_OUTPUT
+
+    - name: Keep alive (5h30m)
+      run: |
+        echo "Sleeping to keep the runner alive..."
+        sleep 19800
+
+    - name: Re-dispatch workflow (optional)
+      env:
+        PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+      run: |
+        curl -s -X POST \
+          -H "Authorization: token ${PERSONAL_TOKEN}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -d '{"event_type":"Main Ubuntu C1"}' \
+          "https://api.github.com/repos/${{ github.repository }}/dispatches" || true
