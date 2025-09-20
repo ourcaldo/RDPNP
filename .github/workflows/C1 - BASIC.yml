@@ -1,131 +1,91 @@
-# MAIN C4 Workflow
-#
+# MAIN Ubuntu + ngrok (SSH) Workflow
 # Description:
-# This workflow automates the setup and deployment of a remote desktop service
-# using ngrok, installs necessary dependencies (Python, Camoufox, etc.), and
-# triggers the Camoufox bot to run. It also configures Windows Defender, firewall,
-# and RDP settings.
+# This workflow automates the setup of an Ubuntu runner,
+# enables SSH, installs dependencies, and starts ngrok TCP tunnel.
 #
 # Author: ourcaldo@gmail.com
 #
 # Version: 1.0
-# Date: 2025-04-22
+# Date: 2025-09-21
 
-name: Main C1 - BASIC
+name: Main Ubuntu C1
 
 on:
-  workflow_dispatch:
-  repository_dispatch:
-    types: [Main C1]
+  workflow_dispatch:   # <-- THIS MAKES THE "Run workflow" BUTTON APPEAR
 
 jobs:
   build:
-    if: github.event_name == 'repository_dispatch' || github.event_name == 'workflow_dispatch'
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 350
 
     steps:
-    - name: Download ngrok
-      run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-    - name: Extract ngrok
-      run: Expand-Archive ngrok.zip
+    - name: Update & install packages
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y --no-install-recommends openssh-server curl unzip jq
+        sudo systemctl enable --now ssh
+      shell: bash
+
+    - name: Set password for runner user
+      run: echo "runner:P@ssw0rd!" | sudo chpasswd
+      shell: bash
+
+    - name: Configure SSH to allow password login
+      run: |
+        sudo sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+        sudo sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+        sudo systemctl restart ssh
+      shell: bash
+
+    - name: Download ngrok
+      run: |
+        curl -sSL https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -o ngrok.tgz
+        tar -xzf ngrok.tgz
+        sudo mv ngrok /usr/local/bin/ngrok
+        sudo chmod +x /usr/local/bin/ngrok
+        ngrok version
+      shell: bash
 
     - name: Create ngrok config file
-      run: |
-        New-Item -ItemType Directory -Force -Path .\ngrok
-        Add-Content -Path .\ngrok\ngrok.yml -Value "version: 2"
-        Add-Content -Path .\ngrok\ngrok.yml -Value "authtoken: $Env:NGROK_AUTH_TOKEN"
-        Add-Content -Path .\ngrok\ngrok.yml -Value "tunnels:"
-        Add-Content -Path .\ngrok\ngrok.yml -Value "  rdp:"
-        Add-Content -Path .\ngrok\ngrok.yml -Value "    proto: tcp"
-        Add-Content -Path .\ngrok\ngrok.yml -Value "    addr: 3389"
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-      shell: pwsh
-
-    - name: Enable Terminal Services
-      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-
-    - name: Enable RDP Firewall
-      run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-
-    - name: Set RDP User Authentication
-      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
-
-    - name: Set Password for runneradmin
-      run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
-
-    - name: Set Account Lockout Threshold to 0
       run: |
-        secedit /export /cfg C:\secpol.cfg
-        (Get-Content C:\secpol.cfg).replace("LockoutBadCount = 10", "LockoutBadCount = 0") | Set-Content C:\secpol.cfg
-        secedit /configure /db C:\Windows\Security\Local.sdb /cfg C:\secpol.cfg /areas SECURITYPOLICY
-        Remove-Item C:\secpol.cfg
-      shell: powershell
-    
-    - name: Install Chocolatey
+        mkdir -p ~/.ngrok2
+        cat > ~/.ngrok2/ngrok.yml <<EOF
+authtoken: ${NGROK_AUTH_TOKEN}
+tunnels:
+  ssh:
+    proto: tcp
+    addr: 22
+EOF
+      shell: bash
+
+    - name: Start ngrok tunnel
       run: |
-        Set-ExecutionPolicy Bypass -Scope Process -Force
-        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
-        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        nohup ngrok start --config ~/.ngrok2/ngrok.yml ssh > ngrok.log 2>&1 &
+        sleep 10
+        echo "Ngrok tunnel initialized"
+      shell: bash
 
-    - name: Install Python via Chocolatey
-      run: choco install python --pre -y
-
-    - name: Add Python to PATH manually
+    - name: Show ngrok endpoint (host:port)
       run: |
-        $pythonPath = "C:\Python312\Scripts;C:\Python312\"
-        [Environment]::SetEnvironmentVariable("Path", $Env:Path + ";$pythonPath", [EnvironmentVariableTarget]::Machine)
-        $env:Path += ";$pythonPath"
-      shell: powershell
+        API_JSON=$(curl -sS http://127.0.0.1:4040/api/tunnels)
+        PUBLIC_URL=$(echo "$API_JSON" | jq -r '.tunnels[]?.public_url' | grep '^tcp://')
+        HOSTPORT=${PUBLIC_URL#tcp://}
+        HOST=$(echo "$HOSTPORT" | cut -d: -f1)
+        PORT=$(echo "$HOSTPORT" | cut -d: -f2)
+        echo "SSH endpoint ready:"
+        echo "ssh runner@${HOST} -p ${PORT}"
+        echo "Password: P@ssw0rd!"
+      shell: bash
 
-    - name: Upgrade pip
-      run: python -m ensurepip --upgrade && python -m pip install --upgrade pip
-
-    - name: Install Notepad++
-      run: choco install notepadplusplus -y
-
-    - name: Install WinRAR
-      run: choco install winrar -y
-
-    - name: Disable Windows Defender Real-time Protection
-      run: Set-MpPreference -DisableRealtimeMonitoring $true
-      shell: pwsh
-
-    - name: Disable Windows Defender via Registry
-      run: |
-        New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft" -Name "Windows Defender" -Force
-        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
-      shell: pwsh
-
-    - name: Download Camoufox.zip to RDP Desktop
-      run: Invoke-WebRequest "https://nexpocket.com/GetProxy.zip?t=$(Get-Date -Format 'yyyyMMddHHmmss')" -OutFile C:\Users\runneradmin\Desktop\GetProxy.zip
-
-    - name: Extract Camoufox
-      run: Expand-Archive -Path C:\Users\runneradmin\Desktop\GetProxy.zip -DestinationPath C:\Users\runneradmin\Desktop\GetProxy
-
-    - name: Install Requirements
-      run: pip install -r C:\Users\runneradmin\Desktop\GetProxy\requirements.txt
-
-    - name: Run the program
-      run: |
-        cd C:\Users\runneradmin\Desktop\GetProxy
-        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python wd.py'
-      shell: powershell
-
-    - name: Start Ngrok Tunnel
-      run: .\ngrok\ngrok.exe start --all --config .\ngrok\ngrok.yml
-      shell: pwsh
-
-    - name: Wait for ngrok to initialize
-      run: Start-Sleep -Seconds 10
-      shell: pwsh
-
-    - name: Wait before next redeploy (5h30m)
-      run: Start-Sleep -Seconds 19800
-      shell: pwsh
+    - name: Keep alive (5h30m)
+      run: sleep 19800
+      shell: bash
 
     - name: Mark workflow as successful
       run: echo "Success!"
-      shell: pwsh
+      shell: bash
