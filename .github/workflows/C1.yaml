@@ -6,7 +6,7 @@
 #
 # Author: ourcaldo@gmail.com
 #
-# Version: 1.0
+# Version: 1.1
 # Date: 2025-09-21
 
 name: Main Ubuntu
@@ -29,8 +29,17 @@ jobs:
         sudo apt-get install -y openssh-server curl unzip
         sudo systemctl enable ssh
         sudo systemctl start ssh
-        # Set password for runneradmin
-        echo "runneradmin:P@ssw0rd!" | sudo chpasswd
+
+    - name: Setup SSH user
+      run: |
+        # Set password for default GitHub runner user
+        echo "runner:P@ssw0rd!" | sudo chpasswd
+
+        # (Optional) Enable root login too
+        echo "root:RootPass123!" | sudo chpasswd
+        sudo sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+        sudo sed -i 's/^PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+        sudo systemctl restart ssh
 
     - name: Download ngrok
       run: |
