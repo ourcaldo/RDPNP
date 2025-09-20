@@ -1,8 +1,7 @@
 # MAIN Ubuntu + ngrok (SSH) Workflow
 # Description:
 # This workflow automates the setup of an Ubuntu runner,
-# enables SSH, installs necessary dependencies,
-# and starts an ngrok TCP tunnel for SSH access.
+# enables SSH, installs dependencies, and starts ngrok TCP tunnel.
 #
 # Author: ourcaldo@gmail.com
 #
@@ -12,11 +11,10 @@
 name: Main Ubuntu C1
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:   # <-- THIS MAKES THE "Run workflow" BUTTON APPEAR
 
 jobs:
   build:
-    if: github.event_name == 'repository_dispatch' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 350
 
@@ -84,21 +82,10 @@ EOF
         echo "Password: P@ssw0rd!"
       shell: bash
 
-    - name: Wait before next redeploy (5h30m)
+    - name: Keep alive (5h30m)
       run: sleep 19800
       shell: bash
 
     - name: Mark workflow as successful
       run: echo "Success!"
-      shell: bash
-
-    - name: Re-dispatch workflow
-      env:
-        PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
-      run: |
-        curl -X POST \
-          -H "Authorization: token ${PERSONAL_TOKEN}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          -d '{"event_type":"Main Ubuntu C1"}' \
-          "https://api.github.com/repos/${{ github.repository }}/dispatches"
       shell: bash
