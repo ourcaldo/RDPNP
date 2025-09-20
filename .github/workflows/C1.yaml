@@ -1,15 +1,11 @@
-# MAIN Ubuntu Workflow
-#
-# Description:
-# This workflow automates the setup of an Ubuntu SSH server
-# using ngrok with a reserved domain.
-#
+# MAIN Ubuntu + ngrok (SSH) Workflow
+# Description: Starts an Ubuntu runner, enables SSH, starts ngrok TCP tunnel
+# and prints the ready-to-use SSH command (tcp.ngrok.io:PORT). Auto re-dispatches.
 # Author: ourcaldo@gmail.com
-#
-# Version: 1.1
+# Version: 1.2
 # Date: 2025-09-21
 
-name: Main Ubuntu
+name: Main Ubuntu (ngrok-ssh)
 
 on:
   workflow_dispatch:
@@ -23,62 +19,150 @@ jobs:
     timeout-minutes: 350
 
     steps:
-    - name: Update & Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y openssh-server curl unzip
-        sudo systemctl enable ssh
-        sudo systemctl start ssh
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-    - name: Setup SSH user
+    - name: Update & install required packages
       run: |
-        # Set password for default GitHub runner user
+        set -euo pipefail
+        sudo apt-get update -y
+        sudo apt-get install -y --no-install-recommends openssh-server curl unzip jq
+        # enable and start ssh
+        sudo systemctl enable --now ssh
+        # show sshd version & listening sockets for debugging
+        sudo ssh -V || true
+        ss -tunlp | sed -n '1,200p'
+
+    - name: Configure SSH user & allow password auth
+      run: |
+        set -euo pipefail
+        # set password for the default GitHub runner user 'runner'
         echo "runner:P@ssw0rd!" | sudo chpasswd
 
-        # (Optional) Enable root login too
-        echo "root:RootPass123!" | sudo chpasswd
-        sudo sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
-        sudo sed -i 's/^PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+        # OPTIONAL (uncomment if you want root login too)
+        # echo "root:RootPass123!" | sudo chpasswd
+
+        # Ensure sshd permits password authentication and root if needed
+        sudo sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config || true
+        sudo sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config || true
+        # restart sshd to apply
         sudo systemctl restart ssh
+        sleep 1
+        # sanity: show sshd listening
+        ss -tunlp | grep ssh || true
 
-    - name: Download ngrok
+    - name: Download & install ngrok (v3)
       run: |
+        set -euo pipefail
         curl -sSL https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -o ngrok.tgz
-        tar -xvzf ngrok.tgz
-        sudo mv ngrok /usr/local/bin/
+        tar -xzf ngrok.tgz
+        sudo mv ngrok /usr/local/bin/ngrok
+        sudo chmod +x /usr/local/bin/ngrok
+        /usr/local/bin/ngrok version
 
-    - name: Create ngrok config file
-      run: |
-        mkdir -p ~/.ngrok2
-        echo "version: 2" > ~/.ngrok2/ngrok.yml
-        echo "authtoken: $NGROK_AUTH_TOKEN" >> ~/.ngrok2/ngrok.yml
-        echo "tunnels:" >> ~/.ngrok2/ngrok.yml
-        echo "  ssh:" >> ~/.ngrok2/ngrok.yml
-        echo "    proto: tcp" >> ~/.ngrok2/ngrok.yml
-        echo "    addr: 22" >> ~/.ngrok2/ngrok.yml
-        echo "    hostname: lashonda-nonlaminated-jocelynn.ngrok-free.app" >> ~/.ngrok2/ngrok.yml
+    - name: Create ngrok config (TCP tunnel for SSH)
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-
-    - name: Start ngrok Tunnel
       run: |
-        nohup ngrok start --all --config ~/.ngrok2/ngrok.yml > ngrok.log 2>&1 &
-        sleep 10
-        curl --silent --show-error http://127.0.0.1:4040/api/tunnels || true
+        set -euo pipefail
+        mkdir -p ~/.ngrok2
+        cat > ~/.ngrok2/ngrok.yml <<EOF
+authtoken: ${NGROK_AUTH_TOKEN}
+tunnels:
+  ssh:
+    proto: tcp
+    addr: 22
+EOF
+        echo "ngrok config written to ~/.ngrok2/ngrok.yml"
+        sed -n '1,200p' ~/.ngrok2/ngrok.yml
 
-    - name: Check public IP
-      run: curl http://ipinfo.io
+    - name: Start ngrok tunnel (background) and wait for API
+      run: |
+        set -euo pipefail
+        # start only the ssh tunnel (so logs are less noisy)
+        nohup /usr/local/bin/ngrok start --config ~/.ngrok2/ngrok.yml ssh > ngrok.log 2>&1 &
+        # wait for ngrok local API to show the tunnel (try for up to 20s)
+        ATTEMPTS=20
+        COUNT=0
+        while [ $COUNT -lt $ATTEMPTS ]; do
+          sleep 1
+          if curl -sS http://127.0.0.1:4040/api/tunnels > /dev/null 2>&1; then
+            break
+          fi
+          COUNT=$((COUNT+1))
+        done
+        echo "ngrok local API response:"
+        curl -sS http://127.0.0.1:4040/api/tunnels || true
+        echo "tail of ngrok.log (first 200 lines):"
+        sed -n '1,200p' ngrok.log || true
 
-    - name: Wait before next redeploy (5h30m)
-      run: sleep 19800
+    - name: Resolve and print SSH command (host:port) — required: jq
+      id: get_endpoint
+      run: |
+        set -euo pipefail
+        # try to extract a tcp public_url from the ngrok API JSON
+        API_JSON=$(curl -sS http://127.0.0.1:4040/api/tunnels || true)
+        echo "$API_JSON" > ngrok_api.json
+        PUBLIC_URL=$(echo "$API_JSON" | jq -r '.tunnels[]?.public_url' 2>/dev/null | grep '^tcp://' || true)
+
+        # If not found, fallback to scanning the ngrok.log for tcp://
+        if [ -z "$PUBLIC_URL" ]; then
+          PUBLIC_URL=$(grep -oE 'tcp://[[:alnum:].-]+:[0-9]+' ngrok.log | head -n1 || true)
+        fi
+
+        if [ -z "$PUBLIC_URL" ]; then
+          echo "ERROR: Could not find a tcp ngrok public_url. Dumping API and logs for debug:"
+          echo "### API:"
+          cat ngrok_api.json || true
+          echo "### LOG:"
+          sed -n '1,200p' ngrok.log || true
+          exit 1
+        fi
+
+        # extract host and port
+        HOSTPORT=${PUBLIC_URL#tcp://}
+        HOST=$(echo "$HOSTPORT" | cut -d: -f1)
+        PORT=$(echo "$HOSTPORT" | cut -d: -f2)
+
+        # Print clear instructions in logs
+        echo "==== NGROK TCP endpoint found ===="
+        echo "public_url: $PUBLIC_URL"
+        echo "SSH command (copy/paste):"
+        echo "ssh runner@${HOST} -p ${PORT}"
+        echo "Password: P@ssw0rd!"
+        echo "=================================="
+
+        # export outputs for later steps (available as job step outputs)
+        echo "ssh_command=ssh runner@${HOST} -p ${PORT}" >> $GITHUB_OUTPUT
+        echo "ssh_host=${HOST}" >> $GITHUB_OUTPUT
+        echo "ssh_port=${PORT}" >> $GITHUB_OUTPUT
+
+    - name: Show connection test (optional: try opening local tcp connection to localhost:22)
+      run: |
+        set -euo pipefail
+        echo "Testing local SSH connectivity (connect to localhost:22 from runner):"
+        timeout 2 bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/22' && echo "Local port 22 reachable" || echo "Local port 22 NOT reachable (but ngrok can still forward if it connects locally)"
+        echo "ngrok API snapshot:"
+        cat ngrok_api.json || true
+
+    - name: Keep alive (5h30m)
+      run: |
+        # keep the runner alive approximately 5h30m (19800s)
+        echo "Sleeping to keep the runner alive (19800s)..."
+        sleep 19800
 
     - name: Mark workflow as successful
-      run: echo "Success!"
-
-    - name: Re-dispatch workflow
       run: |
-        curl -X POST \
-          -H "Authorization: token ${{ secrets.PERSONAL_TOKEN }}" \
+        echo "Success!"
+
+    - name: Re-dispatch workflow (self-trigger)
+      env:
+        PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+      run: |
+        set -euo pipefail
+        # re-dispatch the same event so the workflow can re-run
+        curl -s -X POST \
+          -H "Authorization: token ${PERSONAL_TOKEN}" \
           -H "Accept: application/vnd.github.v3+json" \
-          -d '{"event_type": "Main Ubuntu"}' \
-          https://api.github.com/repos/${{ github.repository }}/dispatches
+          -d '{"event_type":"Main Ubuntu"}' \
+          "https://api.github.com/repos/${{ github.repository }}/dispatches" || true
