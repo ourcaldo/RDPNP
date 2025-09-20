@@ -1,91 +1,97 @@
-# MAIN Ubuntu + ngrok (SSH) Workflow
-# Description:
-# This workflow automates the setup of an Ubuntu runner,
-# enables SSH, installs dependencies, and starts ngrok TCP tunnel.
-#
-# Author: ourcaldo@gmail.com
-#
-# Version: 1.0
-# Date: 2025-09-21
-
-name: Main Ubuntu C1
+name: Ubuntu Server with Ngrok
 
 on:
-  workflow_dispatch:   # <-- THIS MAKES THE "Run workflow" BUTTON APPEAR
+  workflow_dispatch:
+  repository_dispatch:
+    types: [ubuntu-server]
 
 jobs:
-  build:
+  ubuntu-server:
+    if: github.event_name == 'repository_dispatch' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 350
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    - name: Update & install packages
+    - name: Install ngrok
       run: |
-        sudo apt-get update -y
-        sudo apt-get install -y --no-install-recommends openssh-server curl unzip jq
-        sudo systemctl enable --now ssh
-      shell: bash
+        curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+        echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+        sudo apt update && sudo apt install ngrok
 
-    - name: Set password for runner user
-      run: echo "runner:P@ssw0rd!" | sudo chpasswd
-      shell: bash
-
-    - name: Configure SSH to allow password login
+    - name: Configure ngrok
       run: |
-        sudo sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
-        sudo sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+        mkdir -p ~/.ngrok2/
+        echo "version: 2" > ~/.ngrok2/ngrok.yml
+        echo "authtoken: ${{ secrets.NGROK_AUTH_TOKEN }}" >> ~/.ngrok2/ngrok.yml
+        echo "tunnels:" >> ~/.ngrok2/ngrok.yml
+        echo "  ssh:" >> ~/.ngrok2/ngrok.yml
+        echo "    proto: tcp" >> ~/.ngrok2/ngrok.yml
+        echo "    addr: 22" >> ~/.ngrok2/ngrok.yml
+        echo "  web:" >> ~/.ngrok2/ngrok.yml
+        echo "    proto: http" >> ~/.ngrok2/ngrok.yml
+        echo "    addr: 80" >> ~/.ngrok2/ngrok.yml
+        echo "    hostname: ${{ secrets.NGROK_DOMAIN }}" >> ~/.ngrok2/ngrok.yml
+
+    - name: Set up SSH server
+      run: |
+        sudo apt update
+        sudo apt install -y openssh-server
+        sudo systemctl enable ssh
+        sudo systemctl start ssh
+
+    - name: Create user and set password
+      run: |
+        sudo useradd -m -s /bin/bash ubuntuuser
+        echo "ubuntuuser:P@ssw0rd!" | sudo chpasswd
+        echo "ubuntuuser ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/ubuntuuser
+
+    - name: Install necessary packages
+      run: |
+        sudo apt install -y python3 python3-pip curl wget git vim
+
+    - name: Configure SSH for password authentication
+      run: |
+        sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+        sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config
         sudo systemctl restart ssh
-      shell: bash
 
-    - name: Download ngrok
+    - name: Start ngrok tunnels
       run: |
-        curl -sSL https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -o ngrok.tgz
-        tar -xzf ngrok.tgz
-        sudo mv ngrok /usr/local/bin/ngrok
-        sudo chmod +x /usr/local/bin/ngrok
-        ngrok version
-      shell: bash
-
-    - name: Create ngrok config file
-      env:
-        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-      run: |
-        mkdir -p ~/.ngrok2
-        cat > ~/.ngrok2/ngrok.yml <<EOF
-authtoken: ${NGROK_AUTH_TOKEN}
-tunnels:
-  ssh:
-    proto: tcp
-    addr: 22
-EOF
-      shell: bash
-
-    - name: Start ngrok tunnel
-      run: |
-        nohup ngrok start --config ~/.ngrok2/ngrok.yml ssh > ngrok.log 2>&1 &
+        ngrok start --all --config ~/.ngrok2/ngrok.yml > ngrok.log 2>&1 &
         sleep 10
-        echo "Ngrok tunnel initialized"
-      shell: bash
+        
+        # Extract tunnel URLs
+        curl http://localhost:4040/api/tunnels | jq -r '.tunnels[] | "\(.name): \(.public_url)"' > tunnel_urls.txt
+        cat tunnel_urls.txt
 
-    - name: Show ngrok endpoint (host:port)
+    - name: Display connection information
       run: |
-        API_JSON=$(curl -sS http://127.0.0.1:4040/api/tunnels)
-        PUBLIC_URL=$(echo "$API_JSON" | jq -r '.tunnels[]?.public_url' | grep '^tcp://')
-        HOSTPORT=${PUBLIC_URL#tcp://}
-        HOST=$(echo "$HOSTPORT" | cut -d: -f1)
-        PORT=$(echo "$HOSTPORT" | cut -d: -f2)
-        echo "SSH endpoint ready:"
-        echo "ssh runner@${HOST} -p ${PORT}"
+        echo "=== SSH Connection ==="
+        cat tunnel_urls.txt | grep ssh
+        echo ""
+        echo "=== Web Server ==="
+        cat tunnel_urls.txt | grep web
+        echo ""
+        echo "=== Login Credentials ==="
+        echo "Username: ubuntuuser"
         echo "Password: P@ssw0rd!"
-      shell: bash
 
-    - name: Keep alive (5h30m)
-      run: sleep 19800
-      shell: bash
+    - name: Start simple web server (optional)
+      run: |
+        python3 -m http.server 80 > /dev/null 2>&1 &
 
-    - name: Mark workflow as successful
-      run: echo "Success!"
-      shell: bash
+    - name: Keep alive and wait
+      run: |
+        echo "Server is running. Waiting for 5 hours 30 minutes..."
+        sleep 19800
+
+    - name: Re-dispatch workflow
+      run: |
+        curl -X POST \
+          -H "Authorization: token ${{ secrets.PERSONAL_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -d '{"event_type": "ubuntu-server"}' \
+          https://api.github.com/repos/${{ github.repository }}/dispatches
