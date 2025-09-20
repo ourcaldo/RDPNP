@@ -13,8 +13,6 @@ name: Main Ubuntu C1
 
 on:
   workflow_dispatch:
-  repository_dispatch:
-    types: [Main Ubuntu C1]
 
 jobs:
   build:
