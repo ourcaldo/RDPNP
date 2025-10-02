@@ -82,13 +82,6 @@ jobs:
         curl http://ipinfo.io
       shell: powershell
 
-
-    - name: Run the program (npb.py)
-      run: |
-        cd C:\Users\runneradmin\Desktop\Camoufox
-        Start-Process powershell -ArgumentList '-NoExit', '-Command', 'python main.py'
-      shell: powershell
-
     - name: Start Ngrok Tunnel
       run: Start-Process .\ngrok\ngrok.exe -ArgumentList 'start --all --config .\ngrok\ngrok.yml'
       shell: pwsh
